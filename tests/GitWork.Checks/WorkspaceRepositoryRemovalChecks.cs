@@ -47,6 +47,7 @@ internal static class WorkspaceRepositoryRemovalChecks
             var stalePreview = await service.PreviewRepositoryRemovalAsync(workspace, firstRepository, [workspace]);
             var dirtyFile = Path.Combine(firstPath, "local-change.txt");
             File.WriteAllText(dirtyFile, "Сохранить на диске.");
+            File.WriteAllText(Path.Combine(firstPath, "README.md"), "Локальное изменение отслеживаемого файла.");
             var staleRejected = false;
 
             try
@@ -60,9 +61,32 @@ internal static class WorkspaceRepositoryRemovalChecks
 
             check(staleRejected && workspace.WorktreePaths.ContainsKey(firstRepository), "Устаревший просмотр удаления отклонён без изменения состава комплекта");
             var dirtyPreview = await service.PreviewRepositoryRemovalAsync(workspace, firstRepository, [workspace]);
-            check(!dirtyPreview.CanDeleteWorkingCopy && dirtyPreview.ChangedFileCount > 0, "Грязную рабочую копию нельзя удалить с диска");
-            var removedLast = await service.RemoveRepositoryAsync(workspace, dirtyPreview, false, [workspace]);
-            check(!removedLast && File.Exists(dirtyFile) && Directory.Exists(firstPath), "Убрать грязный репозиторий из комплекта можно, сохранив папку");
+            check(dirtyPreview.CanDeleteWorkingCopy && dirtyPreview.ChangedFileCount > 0, "Незакоммиченные изменения требуют подтверждения, но не блокируют удаление worktree");
+            var defaultRejected = false;
+
+            try
+            {
+                await service.RemoveRepositoryAsync(workspace, dirtyPreview, true, [workspace]);
+            }
+            catch (GitException)
+            {
+                defaultRejected = true;
+            }
+
+            check(defaultRejected && File.Exists(dirtyFile) && Directory.Exists(firstPath)
+                && (await git.GetWorktreesAsync(firstRepository)).Any(tree => GitService.PathsEqual(tree.Path, firstPath)),
+                "По умолчанию грязный worktree, его папка и регистрация Git сохраняются");
+
+            var untrackedFile = Path.Combine(firstPath, "untracked-local.txt");
+            File.WriteAllText(untrackedFile, "Локальный файл.");
+            dirtyPreview = await service.PreviewRepositoryRemovalAsync(workspace, firstRepository, [workspace]);
+            var removedLast = await service.RemoveRepositoryAsync(workspace, dirtyPreview, true, [workspace], allowUncommittedChanges: true);
+            check(!removedLast && !Directory.Exists(firstPath)
+                && !(await git.GetWorktreesAsync(firstRepository)).Any(tree => GitService.PathsEqual(tree.Path, firstPath)),
+                "Подтверждённое удаление удаляет папку с tracked и untracked изменениями и удаляет регистрацию Git");
+
+            var replacementBranch = "remove-check-replacement-" + Guid.NewGuid().ToString("N");
+            await git.CreateWorktreeAsync(firstRepository, firstPath, replacementBranch, sourceRef);
 
             var cleanWorkspace = new ProjectWorkspace
             {
@@ -79,7 +103,7 @@ internal static class WorkspaceRepositoryRemovalChecks
             File.WriteAllText(Path.Combine(firstRepository, "info", "exclude"), "local-secret.txt\n");
             File.WriteAllText(Path.Combine(firstPath, "local-secret.txt"), "Локальный секрет.");
             var ignoredPreview = await service.PreviewRepositoryRemovalAsync(cleanWorkspace, firstRepository, [cleanWorkspace]);
-            check(!ignoredPreview.CanDeleteWorkingCopy && ignoredPreview.IgnoredFileCount > 0, "Игнорируемый локальный файл защищает рабочую копию от удаления");
+            check(ignoredPreview.CanDeleteWorkingCopy && ignoredPreview.IgnoredFileCount > 0, "Игнорируемые файлы не блокируют удаление worktree");
             var wholeRemovalRejected = false;
 
             try
@@ -91,9 +115,7 @@ internal static class WorkspaceRepositoryRemovalChecks
                 wholeRemovalRejected = true;
             }
 
-            check(wholeRemovalRejected && Directory.Exists(firstPath) && Directory.Exists(secondPath),
-                "Проверка всего комплекта находит ignored-файлы до удаления первой копии");
-            File.Delete(Path.Combine(firstPath, "local-secret.txt"));
+            check(!wholeRemovalRejected, "Удаление всего комплекта разрешено при наличии ignored-файлов");
 
             await git.RunAsync(secondRepository, "worktree", "lock", "--", secondPath);
             var lockedPreview = await service.PreviewRepositoryRemovalAsync(cleanWorkspace, secondRepository, [cleanWorkspace]);
@@ -137,10 +159,62 @@ internal static class WorkspaceRepositoryRemovalChecks
             var mainPreview = await service.PreviewRepositoryRemovalAsync(mainWorkspace, firstRepository, [mainWorkspace]);
             check(!mainPreview.CanDeleteWorkingCopy && mainWorkspace.WorktreePaths.ContainsKey(firstRepository), "Основной репозиторий нельзя удалить с диска");
 
+            var sourceWorkspace = new ProjectWorkspace
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                RepositoryPaths = [sourceRepository],
+                WorktreePaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [sourceRepository] = sourceRepository
+                }
+            };
+            var sourcePreview = await service.PreviewRepositoryRemovalAsync(sourceWorkspace, sourceRepository, [sourceWorkspace]);
+            var ordinaryMainRejected = false;
+
+            try
+            {
+                await git.RemoveWorktreeAsync(sourceRepository, sourceRepository, allowUncommittedChanges: true);
+            }
+            catch (GitException)
+            {
+                ordinaryMainRejected = true;
+            }
+
+            check(!sourcePreview.CanDeleteWorkingCopy && ordinaryMainRejected && Directory.Exists(sourceRepository)
+                && (await git.GetWorktreesAsync(sourceRepository)).Any(tree => GitService.PathsEqual(tree.Path, sourceRepository)),
+                "Основной worktree обычного репозитория нельзя удалить даже с подтверждением изменений");
+
+            var ignoredFile = Path.Combine(firstPath, "local-secret.txt");
+            File.WriteAllText(ignoredFile, "Локальный секрет.");
             var physicalPreview = await service.PreviewRepositoryRemovalAsync(cleanWorkspace, firstRepository, [cleanWorkspace]);
             removedLast = await service.RemoveRepositoryAsync(cleanWorkspace, physicalPreview, true, [cleanWorkspace]);
-            check(!removedLast && !Directory.Exists(firstPath) && cleanWorkspace.PrimaryRepositoryPath == secondRepository,
-                "Физическое удаление чистой копии убирает обе ссылки и переназначает основной репозиторий");
+            check(!removedLast && !Directory.Exists(firstPath) && !File.Exists(ignoredFile)
+                && !(await git.GetWorktreesAsync(firstRepository)).Any(tree => GitService.PathsEqual(tree.Path, firstPath))
+                && cleanWorkspace.PrimaryRepositoryPath == secondRepository,
+                "Физическое удаление worktree удаляет ignored файлы, регистрацию и переназначает основной репозиторий");
+
+            var wholeDirtyFile = Path.Combine(secondPath, "whole-removal.txt");
+            File.WriteAllText(wholeDirtyFile, "Незакоммиченные изменения.");
+            var wholeDirtyRejected = false;
+
+            try
+            {
+                await service.RemoveAsync(cleanWorkspace, [cleanWorkspace]);
+            }
+            catch (GitException)
+            {
+                wholeDirtyRejected = true;
+            }
+
+            check(wholeDirtyRejected && Directory.Exists(secondPath)
+                && (await git.GetWorktreesAsync(secondRepository)).Any(tree => GitService.PathsEqual(tree.Path, secondPath)),
+                "Удаление всего комплекта по умолчанию сохраняет грязную рабочую копию и её регистрацию");
+            var wholeResult = await service.RemoveAsync(cleanWorkspace, [cleanWorkspace], allowUncommittedChanges: true);
+            check(wholeResult.FailedPath is null && wholeResult.RemovedPaths.Any(path => GitService.PathsEqual(path, secondPath))
+                && !Directory.Exists(secondPath)
+                && !(await git.GetWorktreesAsync(secondRepository)).Any(tree => GitService.PathsEqual(tree.Path, secondPath)),
+                "Подтверждённое удаление всего комплекта удаляет грязный worktree и его регистрацию");
+
             var lastPreview = await service.PreviewRepositoryRemovalAsync(cleanWorkspace, secondRepository, [cleanWorkspace]);
             removedLast = await service.RemoveRepositoryAsync(cleanWorkspace, lastPreview, false, [cleanWorkspace]);
             check(removedLast && cleanWorkspace.RepositoryPaths.Count == 0 && cleanWorkspace.WorktreePaths.Count == 0,

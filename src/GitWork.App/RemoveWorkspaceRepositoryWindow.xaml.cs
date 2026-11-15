@@ -20,21 +20,9 @@ public partial class RemoveWorkspaceRepositoryWindow : Window
         {
             this.SafetyWarning.Text = L10n.T("Рабочая копия уже отсутствует. Изменится только состав комплекта.");
         }
-        else
+        else if (preview.ChangedFileCount > 0)
         {
-            var warnings = new List<string>();
-
-            if (preview.ChangedFileCount > 0)
-            {
-                warnings.Add(L10n.T("Изменения: {0} файлов. При удалении только из комплекта они останутся на диске.", preview.ChangedFileCount));
-            }
-
-            if (preview.IgnoredFileCount > 0)
-            {
-                warnings.Add(L10n.T("Игнорируемые файлы: {0}. Они могут содержать локальные данные.", preview.IgnoredFileCount));
-            }
-
-            this.SafetyWarning.Text = string.Join(" ", warnings);
+            this.SafetyWarning.Text = L10n.T("Незакоммиченные изменения: {0} файлов. При удалении с диска они будут безвозвратно потеряны. При удалении только из комплекта файлы сохранятся.", preview.ChangedFileCount);
         }
 
         if (removesLastRepository)

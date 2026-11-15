@@ -99,11 +99,12 @@ internal static class BundleActionsUiChecks
 
     private static void CheckRemovalChoice()
     {
-        var dirty = new WorkspaceRepositoryRemovalPreview("fixture", @"C:\fixture", @"C:\source", @"C:\fixture\copy", true, 2, 0, false, "Есть изменения.");
+        var dirty = new WorkspaceRepositoryRemovalPreview("fixture", @"C:\fixture", @"C:\source", @"C:\fixture\copy", true, 2, 0, true, null);
         var dialog = new RemoveWorkspaceRepositoryWindow("Fixture", dirty, true);
         if (((RadioButton)dialog.FindName("KeepCopyOption")).IsChecked != true
-            || ((RadioButton)dialog.FindName("DeleteCopyOption")).IsEnabled
+            || !((RadioButton)dialog.FindName("DeleteCopyOption")).IsEnabled
             || !((TextBlock)dialog.FindName("SafetyWarning")).Text.Contains("2", StringComparison.Ordinal)
+            || !((TextBlock)dialog.FindName("SafetyWarning")).Text.Contains("безвозвратно", StringComparison.Ordinal)
             || !((TextBlock)dialog.FindName("SafetyWarning")).Text.Contains("последний", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("Удаление должно по умолчанию сохранять папку и предупреждать об изменениях и последнем репозитории.");
@@ -116,16 +117,25 @@ internal static class BundleActionsUiChecks
             throw new InvalidOperationException("Подтверждение безопасного режима не должно выбирать физическое удаление.");
         }
 
-        var clean = dirty with { ChangedFileCount = 0, CanDeleteWorkingCopy = true, DeleteBlockedReason = null };
+        var clean = dirty with { ChangedFileCount = 0, IgnoredFileCount = 10 };
         var delete = new RemoveWorkspaceRepositoryWindow("Fixture", clean, false);
         ((RadioButton)delete.FindName("DeleteCopyOption")).IsChecked = true;
-        if (!delete.DeleteWorkingCopy || !Equals(((Button)delete.FindName("ConfirmButton")).Content, "Удалить с диска"))
+        if (!delete.DeleteWorkingCopy || !Equals(((Button)delete.FindName("ConfirmButton")).Content, "Удалить с диска")
+            || ((TextBlock)delete.FindName("SafetyWarning")).Text.Length != 0)
         {
             throw new InvalidOperationException("Удаление с диска должно требовать отдельного явного выбора и подписи подтверждения.");
         }
 
         delete.Close();
-        Console.WriteLine("OK: удаление по умолчанию сохраняет папку, предупреждает о dirty и последнем репозитории; удаление с диска выбирается явно.");
+        var main = dirty with { CanDeleteWorkingCopy = false, DeleteBlockedReason = "Это основная рабочая копия." };
+        var blocked = new RemoveWorkspaceRepositoryWindow("Main", main, false);
+        if (((RadioButton)blocked.FindName("DeleteCopyOption")).IsEnabled)
+        {
+            throw new InvalidOperationException("Основную рабочую копию нельзя предлагать удалить с диска.");
+        }
+
+        blocked.Close();
+        Console.WriteLine("OK: незакоммиченные изменения требуют предупреждения, ignored-файлы не мешают удалению, основная копия защищена.");
     }
 
     private static IEnumerable<T> Descendants<T>(DependencyObject parent) where T : DependencyObject

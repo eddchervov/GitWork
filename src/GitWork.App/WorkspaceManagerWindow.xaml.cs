@@ -156,7 +156,8 @@ public partial class WorkspaceManagerWindow : Window
                 workspace,
                 preview,
                 dialog.DeleteWorkingCopy,
-                this._settings.Workspaces);
+                this._settings.Workspaces,
+                allowUncommittedChanges: dialog.DeleteWorkingCopy && preview.ChangedFileCount > 0);
 
             if (removedLastRepository)
             {
@@ -183,16 +184,32 @@ public partial class WorkspaceManagerWindow : Window
         await this.ExecuteAsync(async () =>
         {
             var service = new WorkspaceService(this._git);
-            await service.ValidateRemovalAsync(workspace, this._settings.Workspaces);
+            await service.ValidateRemovalAsync(workspace, this._settings.Workspaces, allowUncommittedChanges: true);
+            var changedCopies = new List<string>();
+            foreach (var path in workspace.WorktreePaths.Values)
+            {
+                var changes = await this._git.GetStatusAsync(path, true);
+                if (changes.Count > 0)
+                {
+                    changedCopies.Add(L10n.T("{0}: незакоммиченных файлов — {1}", path, changes.Count));
+                }
+            }
+
             var paths = string.Join("\n", workspace.WorktreePaths.Values);
-            var answer = MessageBox.Show(this, L10n.T("Удалить все рабочие копии этого комплекта?\n\n{0}\n\nВетки сохранятся. Файлы общей папки вне этих копий сохранятся.", paths), L10n.T("Удаление комплекта"), MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            var message = L10n.T("Удалить все рабочие копии этого комплекта?\n\n{0}\n\nВетки сохранятся. Файлы общей папки вне этих копий сохранятся.", paths);
+            if (changedCopies.Count > 0)
+            {
+                message += "\n\n" + L10n.T("Есть незакоммиченные изменения:\n{0}\n\nОни будут безвозвратно удалены вместе с рабочими копиями. Продолжить?", string.Join("\n", changedCopies));
+            }
+
+            var answer = MessageBox.Show(this, message, L10n.T("Удаление комплекта"), MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
 
             if (answer != MessageBoxResult.Yes)
             {
                 return;
             }
 
-            var result = await service.RemoveAsync(workspace, this._settings.Workspaces);
+            var result = await service.RemoveAsync(workspace, this._settings.Workspaces, allowUncommittedChanges: changedCopies.Count > 0);
             workspace.WorktreePaths = workspace.WorktreePaths.Where(pair => !result.RemovedPaths.Any(path => GitService.PathsEqual(path, pair.Value)))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
             workspace.RepositoryPaths = workspace.RepositoryPaths.Where(repositoryPath =>

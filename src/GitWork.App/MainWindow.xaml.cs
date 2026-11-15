@@ -822,24 +822,33 @@ public partial class MainWindow : Window
 
         var repository = this._repository;
         var tree = this._worktree;
+        if (tree.IsMain || tree.IsBare || tree.IsLocked || tree.IsPrunable)
+        {
+            return;
+        }
+
         if (this.IsWorkspaceCopy(tree.Path))
         {
             MessageBox.Show(this, "Эта копия входит в комплект. Управляйте удалением через «Настроить комплект».");
             return;
         }
 
-        var answer = MessageBox.Show(this,
-            $"Удалить рабочую папку?\n\n{tree.Path}\n\nВетка {tree.BranchLabel} останется. При наличии изменений Git отменит удаление.",
-            "Удаление worktree", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-
-        if (answer != MessageBoxResult.Yes)
-        {
-            return;
-        }
-
         await this.ExecuteAsync(async () =>
         {
-            await this._git.RemoveWorktreeAsync(repository.Path, tree.Path);
+            var changes = await this._git.GetStatusAsync(tree.Path, true);
+            var message = L10n.T("Удалить рабочую папку?\n\n{0}\n\nВетка {1} останется.", tree.Path, tree.BranchLabel);
+            if (changes.Count > 0)
+            {
+                message += "\n\n" + L10n.T("Незакоммиченные изменения: {0} файлов. Они будут безвозвратно удалены. Продолжить?", changes.Count);
+            }
+
+            var answer = MessageBox.Show(this, message, L10n.T("Удаление worktree"), MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            await this._git.RemoveWorktreeAsync(repository.Path, tree.Path, allowUncommittedChanges: changes.Count > 0);
             this._settings.SelectedNavigationKey = null;
             await this.ScanAsync();
         }, L10n.T("Удаление рабочей копии…"));

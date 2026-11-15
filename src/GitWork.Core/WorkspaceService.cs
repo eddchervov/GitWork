@@ -62,14 +62,6 @@ public sealed class WorkspaceService(GitService git)
         {
             unavailableReason = "Эта рабочая копия используется другим комплектом.";
         }
-        else if (changes.Count > 0)
-        {
-            unavailableReason = "Сначала сохраните или закоммитьте изменения.";
-        }
-        else if (ignoredCount > 0)
-        {
-            unavailableReason = $"Найдены игнорируемые файлы ({ignoredCount}). Они могут содержать локальные данные.";
-        }
 
         return new WorkspaceRepositoryRemovalPreview(
             workspace.Id,
@@ -87,7 +79,8 @@ public sealed class WorkspaceService(GitService git)
         ProjectWorkspace workspace,
         WorkspaceRepositoryRemovalPreview preview,
         bool deleteWorkingCopy,
-        IReadOnlyCollection<ProjectWorkspace> allWorkspaces)
+        IReadOnlyCollection<ProjectWorkspace> allWorkspaces,
+        bool allowUncommittedChanges = false)
     {
         var current = await this.PreviewRepositoryRemovalAsync(workspace, preview.RepositoryPath, allWorkspaces);
 
@@ -96,8 +89,7 @@ public sealed class WorkspaceService(GitService git)
             || !GitService.PathsEqual(current.RepositoryPath, preview.RepositoryPath)
             || !WorkspaceService.PathsEqualOrBothNull(current.WorktreePath, preview.WorktreePath)
             || current.IsWorkingCopyAvailable != preview.IsWorkingCopyAvailable
-            || current.ChangedFileCount != preview.ChangedFileCount
-            || current.IgnoredFileCount != preview.IgnoredFileCount)
+            || current.ChangedFileCount != preview.ChangedFileCount)
         {
             throw new GitException("Состав или состояние комплекта изменилось. Обновите окно удаления и проверьте его ещё раз.");
         }
@@ -109,7 +101,7 @@ public sealed class WorkspaceService(GitService git)
                 throw new GitException(current.DeleteBlockedReason ?? "Рабочую копию нельзя удалить с диска.");
             }
 
-            await this._git.RemoveWorktreeAsync(current.RepositoryPath, current.WorktreePath);
+            await this._git.RemoveWorktreeAsync(current.RepositoryPath, current.WorktreePath, allowUncommittedChanges);
         }
 
         workspace.RepositoryPaths.RemoveAll(path => GitService.PathsEqual(path, current.RepositoryPath));
@@ -134,7 +126,8 @@ public sealed class WorkspaceService(GitService git)
 
     public async Task ValidateRemovalAsync(
         ProjectWorkspace workspace,
-        IReadOnlyCollection<ProjectWorkspace>? allWorkspaces = null)
+        IReadOnlyCollection<ProjectWorkspace>? allWorkspaces = null,
+        bool allowUncommittedChanges = false)
     {
         if (workspace.WorktreePaths.Count == 0)
         {
@@ -151,16 +144,9 @@ public sealed class WorkspaceService(GitService git)
                 throw new GitException($"Нельзя удалить копию {pair.Value}: она основная, заблокирована или недоступна.");
             }
 
-            if ((await this._git.GetStatusAsync(pair.Value)).Count > 0)
+            if (!allowUncommittedChanges && (await this._git.GetStatusAsync(pair.Value)).Count > 0)
             {
                 throw new GitException($"В {pair.Value} есть изменения. Удаление всего комплекта отменено.");
-            }
-
-            var ignored = await this._git.RunAsync(pair.Value, "ls-files", "--others", "--ignored", "--exclude-standard", "-z");
-
-            if (ignored.Length > 0)
-            {
-                throw new GitException($"В {pair.Value} есть игнорируемые файлы. Удаление всего комплекта отменено, чтобы сохранить локальные данные.");
             }
 
             if (allWorkspaces?.Where(item => item.Id != workspace.Id)
@@ -173,16 +159,17 @@ public sealed class WorkspaceService(GitService git)
 
     public async Task<WorkspaceRemovalResult> RemoveAsync(
         ProjectWorkspace workspace,
-        IReadOnlyCollection<ProjectWorkspace>? allWorkspaces = null)
+        IReadOnlyCollection<ProjectWorkspace>? allWorkspaces = null,
+        bool allowUncommittedChanges = false)
     {
-        await this.ValidateRemovalAsync(workspace, allWorkspaces);
+        await this.ValidateRemovalAsync(workspace, allWorkspaces, allowUncommittedChanges);
         var removed = new List<string>();
 
         foreach (var pair in workspace.WorktreePaths)
         {
             try
             {
-                await this._git.RemoveWorktreeAsync(pair.Key, pair.Value);
+                await this._git.RemoveWorktreeAsync(pair.Key, pair.Value, allowUncommittedChanges);
                 removed.Add(pair.Value);
             }
             catch (Exception exception) when (exception is GitException or IOException or UnauthorizedAccessException)

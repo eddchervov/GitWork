@@ -523,5 +523,10 @@
   "Переименуйте комплект": "Rename workspace",
   "Переименован": "Renamed",
   "Изменён тип": "Type changed",
-  "Изменён": "Modified"
+  "Изменён": "Modified",
+  "{0}: незакоммиченных файлов — {1}": "{0}: uncommitted files — {1}",
+  "Есть незакоммиченные изменения:\n{0}\n\nОни будут безвозвратно удалены вместе с рабочими копиями. Продолжить?": "There are uncommitted changes:\n{0}\n\nThey will be permanently deleted with the working copies. Continue?",
+  "Незакоммиченные изменения: {0} файлов. При удалении с диска они будут безвозвратно потеряны. При удалении только из комплекта файлы сохранятся.": "Uncommitted changes: {0} files. Deleting from disk will permanently discard them. Removing only from the workspace will preserve the files.",
+  "Удалить рабочую папку?\n\n{0}\n\nВетка {1} останется.": "Delete the working directory?\n\n{0}\n\nBranch {1} will be preserved.",
+  "Незакоммиченные изменения: {0} файлов. Они будут безвозвратно удалены. Продолжить?": "Uncommitted changes: {0} files. They will be permanently deleted. Continue?"
 }

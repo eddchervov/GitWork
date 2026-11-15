@@ -262,7 +262,7 @@ public sealed class GitService
         await this.RunAsync(repository, "rev-parse", "--verify", $"{startPoint}^{{commit}}");
     }
 
-    public async Task RemoveWorktreeAsync(string repository, string worktreePath)
+    public async Task RemoveWorktreeAsync(string repository, string worktreePath, bool allowUncommittedChanges = false)
     {
         var worktrees = await this.GetWorktreesAsync(repository);
         var target = worktrees.FirstOrDefault(tree => PathsEqual(tree.Path, worktreePath));
@@ -274,19 +274,12 @@ public sealed class GitService
 
         var changes = await this.GetStatusAsync(target.Path);
 
-        if (changes.Count > 0)
+        if (changes.Count > 0 && !allowUncommittedChanges)
         {
             throw new GitException("В рабочей копии есть изменения. Удаление отменено.");
         }
 
-        var ignoredFiles = await this.RunAsync(target.Path, "ls-files", "--others", "--ignored", "--exclude-standard", "-z");
-
-        if (ignoredFiles.Length > 0)
-        {
-            throw new GitException("В рабочей копии есть игнорируемые файлы. Удаление отменено, чтобы сохранить локальные данные.");
-        }
-
-        await this.RunAsync(repository, "worktree", "remove", "--", target.Path);
+        await this.RunAsync(repository, "worktree", "remove", "--force", "--", target.Path);
     }
 
     public async Task<string> GetDiffAsync(string worktree, ChangedFile file)
