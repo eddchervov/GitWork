@@ -60,6 +60,16 @@ public partial class GitHistoryView : UserControl
 
     public Task RefreshAsync() => this.ReloadAsync();
 
+    internal FrameworkElement TakeToolbar()
+    {
+        ((Grid)this.Toolbar.Parent).Children.Remove(this.Toolbar);
+        this.Toolbar.Margin = new Thickness(0);
+        this.Toolbar.ColumnDefinitions[1].MinWidth = 0;
+        this.Toolbar.ColumnDefinitions[1].Width = GridLength.Auto;
+
+        return this.Toolbar;
+    }
+
     public void Detach()
     {
         this._isClosed = true;

@@ -70,11 +70,14 @@
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top"><TextBox x:Name="CurrentBranchLabel" Style="{StaticResource SelectableText}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="12,0,0,0" /><Button x:Name="ActionsButton" Content="{local:Loc 'Действия'}" Click="Actions_Click" Margin="16,0,0,0" /></StackPanel>
         </Grid>
       </Border>
-      <StackPanel x:Name="ViewTabs" Grid.Row="1" Orientation="Horizontal" Margin="14,8">
-        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ChangesTab" Content="{local:Loc 'Изменения'}" Tag="Changes" Checked="View_Changed" IsChecked="True" Margin="0,0,18,0" />
-        <RadioButton Style="{StaticResource NavigationTab}" x:Name="HistoryTab" Content="{local:Loc 'История'}" Tag="History" Checked="View_Changed" Margin="0,0,18,0" />
-        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ComparisonTab" Content="{local:Loc 'Сравнение'}" Tag="Comparison" Checked="View_Changed" />
-      </StackPanel>
+      <WrapPanel Grid.Row="1" Margin="14,4">
+        <StackPanel x:Name="ViewTabs" Orientation="Horizontal" Margin="0,4" VerticalAlignment="Center">
+          <RadioButton Style="{StaticResource NavigationTab}" x:Name="ChangesTab" Content="{local:Loc 'Изменения'}" Tag="Changes" Checked="View_Changed" IsChecked="True" Margin="0,0,18,0" />
+          <RadioButton Style="{StaticResource NavigationTab}" x:Name="HistoryTab" Content="{local:Loc 'История'}" Tag="History" Checked="View_Changed" Margin="0,0,18,0" />
+          <RadioButton Style="{StaticResource NavigationTab}" x:Name="ComparisonTab" Content="{local:Loc 'Сравнение'}" Tag="Comparison" Checked="View_Changed" />
+        </StackPanel>
+        <ContentControl x:Name="ViewActionsHost" VerticalAlignment="Center" Margin="16,4,0,4" />
+      </WrapPanel>
       <ContentControl x:Name="ViewHost" Grid.Row="2" />
       <TextBlock x:Name="ErrorText" Grid.Row="3" Foreground="{DynamicResource WarningBrush}" Margin="16,5" TextWrapping="Wrap">
         <TextBlock.Style>

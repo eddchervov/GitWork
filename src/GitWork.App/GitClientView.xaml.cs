@@ -228,6 +228,7 @@ public partial class GitClientView : UserControl
                     await this.RefreshBranchesAsync();
                 }
             };
+            this.ViewActionsHost.Content = history.TakeToolbar();
             this.ViewHost.Content = history;
         }
 
@@ -311,6 +312,7 @@ public partial class GitClientView : UserControl
     private void DetachView()
     {
         this._branchVersion++;
+        this.ViewActionsHost.Content = null;
         switch (this.ViewHost.Content)
         {
             case GitHistoryView history: history.Detach(); break;

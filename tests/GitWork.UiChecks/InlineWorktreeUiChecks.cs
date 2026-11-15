@@ -90,6 +90,18 @@ internal static class InlineWorktreeUiChecks
                     throw new InvalidOperationException("Просмотр worktree не должен менять ручной список репозиториев.");
                 }
 
+                window.UpdateLayout();
+                var toolbar = (FrameworkElement)loaded.FindName("Toolbar");
+                var tabs = (FrameworkElement)view.FindName("ViewTabs");
+                var body = (FrameworkElement)loaded.FindName("ClientBody");
+                if (((ContentControl)view.FindName("ViewActionsHost")).Content != toolbar
+                    || Math.Abs(toolbar.TranslatePoint(new Point(0, toolbar.ActualHeight / 2), view).Y
+                        - tabs.TranslatePoint(new Point(0, tabs.ActualHeight / 2), view).Y) > 1
+                    || body.TranslatePoint(new Point(), loaded).Y > 12)
+                {
+                    throw new InvalidOperationException("Кнопки синхронизации должны стоять рядом с вкладками без отдельной пустой полосы над историей.");
+                }
+
                 var contentWidth = host.ActualWidth;
                 ((Button)view.FindName("ActionsButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 view.UpdateLayout();
@@ -150,7 +162,8 @@ internal static class InlineWorktreeUiChecks
         ((RadioButton)repositoriesView.FindName("HistoryTab")).IsChecked = true;
         await InlineWorktreeUiChecks.WaitUntilAsync(() => repositoriesView.CanLeave);
         await repositoriesView.SetRepositoriesAsync(repositories, resetView: true);
-        if (changesTab.IsChecked != true || worktreeHistory.IsChecked != true)
+        if (changesTab.IsChecked != true || worktreeHistory.IsChecked != true
+            || ((ContentControl)repositoriesView.FindName("ViewActionsHost")).Content is not null)
         {
             throw new InvalidOperationException("При входе в раздел репозиториев должны открываться изменения, даже если ранее выбрана история.");
         }
