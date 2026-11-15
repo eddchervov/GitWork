@@ -1,0 +1,19 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.cs]
+indent_size = 4
+csharp_style_qualification_for_field = true:suggestion
+csharp_style_qualification_for_property = true:suggestion
+csharp_style_qualification_for_method = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:warning
+
+[*.{xaml,csproj,props}]
+indent_size = 2

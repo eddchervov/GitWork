@@ -1,0 +1,104 @@
+<UserControl x:Class="GitWork.App.BranchComparisonView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Background="{DynamicResource BackgroundBrush}" Loaded="Window_Loaded" PreviewKeyDown="Window_PreviewKeyDown">
+  <Grid Margin="18">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition />
+    </Grid.RowDefinitions>
+    <Grid Grid.Row="1" Margin="0,0,0,12" MaxWidth="1100" HorizontalAlignment="Left">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" MinWidth="130" />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" MinWidth="130" />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <StackPanel>
+        <TextBlock Text="{local:Loc 'БАЗА'}" Style="{StaticResource Caption}" Margin="0,0,0,5" />
+        <ComboBox x:Name="BasePicker" DisplayMemberPath="DisplayName" SelectionChanged="Reference_SelectionChanged" AutomationProperties.Name="{local:Loc 'Базовая ветка'}" />
+      </StackPanel>
+      <TextBlock Grid.Column="1" Text="→" FontSize="18" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Bottom" Margin="10,0" />
+      <StackPanel Grid.Column="2">
+        <TextBlock Text="{local:Loc 'СРАВНИТЬ С'}" Style="{StaticResource Caption}" Margin="0,0,0,5" />
+        <ComboBox x:Name="TargetPicker" DisplayMemberPath="DisplayName" SelectionChanged="Reference_SelectionChanged" AutomationProperties.Name="{local:Loc 'Сравниваемая ветка'}" />
+      </StackPanel>
+      <Button x:Name="SwapButton" Grid.Column="3" Content="↔" Click="Swap_Click" Margin="10,17,4,0" Padding="12,6" ToolTip="{local:Loc 'Поменять направление сравнения'}" AutomationProperties.Name="{local:Loc 'Поменять базу и сравниваемую версию местами'}" />
+      <Button x:Name="RefreshButton" Grid.Column="4" Content="{local:Loc 'Обновить'}" Click="Refresh_Click" Margin="6,17,0,0" />
+    </Grid>
+    <DockPanel Grid.Row="2" Margin="0,0,0,12" LastChildFill="True">
+      <ComboBox x:Name="ModePicker" DockPanel.Dock="Left" Width="180" DisplayMemberPath="DisplayName" SelectedValuePath="Mode" SelectionChanged="ModePicker_SelectionChanged" AutomationProperties.Name="{local:Loc 'Тип сравнения'}" Margin="0,0,12,0" />
+      <TextBlock x:Name="SummaryText" Style="{StaticResource Caption}" VerticalAlignment="Center" TextWrapping="Wrap" />
+    </DockPanel>
+    <Grid Grid.Row="3">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="250" MinWidth="180" />
+        <ColumnDefinition Width="7" />
+        <ColumnDefinition Width="*" MinWidth="200" />
+      </Grid.ColumnDefinitions>
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="FilesLabel" Text="{local:Loc 'Файлы'}" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <Grid Grid.Row="1" Margin="0,0,0,8">
+          <TextBox x:Name="SearchBox" TextChanged="SearchBox_TextChanged" ToolTip="{local:Loc 'Поиск по изменённым файлам'}" AutomationProperties.Name="{local:Loc 'Поиск файлов'}" />
+          <TextBlock Text="{local:Loc 'Поиск файлов…'}" IsHitTestVisible="False" Margin="10,0" VerticalAlignment="Center">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Text.Length,ElementName=SearchBox}" Value="0">
+                    <Setter Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </Grid>
+        <Grid Grid.Row="2">
+          <ListBox x:Name="FilesList" SelectionChanged="FilesList_SelectionChanged" AutomationProperties.Name="{local:Loc 'Изменённые между ветками файлы'}" VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.IsVirtualizing="True" ScrollViewer.CanContentScroll="True">
+            <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource FileRow}"><Setter Property="Tag" Value="{Binding StatusDescription}" /></Style></ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayPath}" TextWrapping="Wrap" />
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <TextBlock x:Name="EmptyFilesText" Text="{local:Loc 'Нет изменений файлов'}" Foreground="{DynamicResource MutedBrush}" Margin="12" Visibility="Collapsed" IsHitTestVisible="False" />
+        </Grid>
+        <Expander x:Name="CommitsExpander" Grid.Row="3" Header="{local:Loc 'Коммиты только в цели'}" Margin="0,10,0,0" IsExpanded="False" Visibility="Collapsed">
+          <ListBox x:Name="CommitsList" MaxHeight="220" AutomationProperties.Name="{local:Loc 'Коммиты только в целевой версии'}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel>
+                  <TextBlock>
+                    <Run Text="{Binding ShortHash}" Foreground="{DynamicResource AccentBrush}" />
+                    <Run Text="  " />
+                    <Run Text="{Binding Subject}" />
+                  </TextBlock>
+                  <TextBlock Text="{Binding Author}" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Expander>
+      </Grid>
+      <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" Background="{DynamicResource BackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
+      <Grid Grid.Column="2" Margin="16,0,0,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition />
+        </Grid.RowDefinitions>
+        <DockPanel Margin="0,0,0,9">
+          <TextBlock x:Name="FileTitle" Text="{local:Loc 'Выберите файл'}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+          <TextBlock x:Name="LoadingText" Text="{local:Loc 'Чтение сравнения…'}" Style="{StaticResource Caption}" HorizontalAlignment="Right" Visibility="Collapsed" />
+        </DockPanel>
+        <local:DiffView Grid.Row="1" x:Name="DiffViewer" />
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

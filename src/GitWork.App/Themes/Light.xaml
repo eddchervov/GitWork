@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <SolidColorBrush x:Key="BackgroundBrush" Color="#F4F7FA" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="RaisedBrush" Color="#EAF0F5" />
+  <SolidColorBrush x:Key="BorderBrush" Color="#CCD6E0" />
+  <SolidColorBrush x:Key="TextBrush" Color="#182C3D" />
+  <SolidColorBrush x:Key="MutedBrush" Color="#53677A" />
+  <SolidColorBrush x:Key="AccentBrush" Color="#087F70" />
+  <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#DDF2EC" />
+  <SolidColorBrush x:Key="WarningBrush" Color="#915400" />
+  <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="SelectionBrush" Color="#A7DACE" />
+  <SolidColorBrush x:Key="SelectedBorderBrush" Color="#58A393" />
+  <SolidColorBrush x:Key="ScrollThumbBrush" Color="#A2B2C2" />
+  <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#738A9F" />
+  <SolidColorBrush x:Key="DiffRemovedBrush" Color="#FCE2E4" />
+  <SolidColorBrush x:Key="DiffAddedBrush" Color="#DCF1E4" />
+  <SolidColorBrush x:Key="FileModifiedBrush" Color="#FFF5D8" />
+  <SolidColorBrush x:Key="FileAddedBrush" Color="#E4F4E9" />
+  <SolidColorBrush x:Key="FileDeletedBrush" Color="#FBE7EA" />
+</ResourceDictionary>

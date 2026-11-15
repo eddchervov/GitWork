@@ -1,0 +1,52 @@
+<UserControl x:Class="GitWork.App.GitClientView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Background="{DynamicResource BackgroundBrush}">
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition x:Name="RepositoryColumn" Width="240" MinWidth="180" MaxWidth="520" />
+      <ColumnDefinition x:Name="RepositorySplitterColumn" Width="7" />
+      <ColumnDefinition />
+      <ColumnDefinition x:Name="ActionsColumn" Width="0" />
+    </Grid.ColumnDefinitions>
+    <Border x:Name="RepositorySidebar" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0" Padding="12">
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <TextBlock Text="{local:Loc 'РЕПОЗИТОРИИ'}" Style="{StaticResource Caption}" Margin="6,4,0,14" />
+        <TextBox x:Name="SearchBox" Grid.Row="1" TextChanged="Search_Changed" ToolTip="{local:Loc 'Поиск по названию и пути'}" AutomationProperties.Name="{local:Loc 'Поиск репозиториев'}" Margin="0,0,0,12" />
+        <ListBox VirtualizingPanel.IsVirtualizing="True" ScrollViewer.CanContentScroll="True" x:Name="RepositoriesList" PreviewMouseRightButtonUp="Repository_RightClick" Grid.Row="2" SelectionChanged="Repository_Changed" AutomationProperties.Name="{local:Loc 'Добавленные репозитории'}">
+          <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}"><Setter Property="Padding" Value="8,6" /><Setter Property="Margin" Value="0,0,0,2" /><Setter Property="ToolTip" Value="{Binding Path}" /></Style></ListBox.ItemContainerStyle>
+          <ListBox.ItemTemplate><DataTemplate><DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding Group}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="10,0,0,0" MaxWidth="100" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /></DockPanel></DataTemplate></ListBox.ItemTemplate>
+        </ListBox>
+        <Button Grid.Row="3" Content="{local:Loc 'Добавить репозиторий…'}" Click="AddRepository_Click" Margin="0,12,0,0" />
+      </Grid>
+    </Border>
+    <GridSplitter x:Name="RepositorySplitter" Grid.Column="1" Width="7" HorizontalAlignment="Stretch" Background="Transparent" />
+    <Grid Grid.Column="2">
+      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+      <Border Padding="16,12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+        <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <StackPanel><TextBox x:Name="RepositoryName" FontSize="20" FontWeight="SemiBold" IsReadOnly="True" Style="{StaticResource SelectableText}" Text="{local:Loc 'Выберите репозиторий'}" /><TextBox x:Name="RepositoryLocation" IsReadOnly="True" Style="{StaticResource SelectableText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" /><Button x:Name="BackToWorkspace" Content="{local:Loc '← К worktree'}" Click="BackToWorkspace_Click" HorizontalAlignment="Left" Margin="0,8,0,0" Visibility="Collapsed" /></StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top"><TextBox x:Name="CurrentBranchLabel" Style="{StaticResource SelectableText}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="12,0,0,0" /><Button x:Name="ActionsButton" Content="{local:Loc 'Действия'}" Click="Actions_Click" Margin="16,0,0,0" /></StackPanel>
+        </Grid>
+      </Border>
+      <StackPanel x:Name="ViewTabs" Grid.Row="1" Orientation="Horizontal" Margin="14,8">
+        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ChangesTab" Content="{local:Loc 'Изменения'}" GroupName="GitView" Tag="Changes" Checked="View_Changed" Margin="0,0,18,0" />
+        <RadioButton Style="{StaticResource NavigationTab}" x:Name="HistoryTab" Content="{local:Loc 'История'}" GroupName="GitView" Tag="History" Checked="View_Changed" IsChecked="True" Margin="0,0,18,0" />
+        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ComparisonTab" Content="{local:Loc 'Сравнение'}" GroupName="GitView" Tag="Comparison" Checked="View_Changed" />
+      </StackPanel>
+      <ContentControl x:Name="ViewHost" Grid.Row="2" />
+      <TextBlock x:Name="ErrorText" Grid.Row="3" Foreground="{DynamicResource WarningBrush}" Margin="16,5" TextWrapping="Wrap">
+        <TextBlock.Style>
+          <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Style.Triggers>
+              <Trigger Property="Text" Value="">
+                <Setter Property="Visibility" Value="Collapsed" />
+              </Trigger>
+            </Style.Triggers>
+          </Style>
+        </TextBlock.Style>
+      </TextBlock>
+    </Grid>
+    <Border Grid.Column="3" x:Name="ActionsPanel" Visibility="Collapsed" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" Padding="16">
+      <StackPanel><DockPanel><Button Content="×" DockPanel.Dock="Right" Click="Actions_Click" Padding="8,3" AutomationProperties.Name="{local:Loc 'Закрыть действия'}" /><TextBlock Text="{local:Loc 'Текущая копия'}" FontWeight="SemiBold" VerticalAlignment="Center" /></DockPanel><TextBlock Text="{local:Loc 'Ветка'}" Style="{StaticResource Caption}" Margin="0,18,0,6" /><ComboBox x:Name="BranchesPicker" DisplayMemberPath="DisplayName" /><Button Content="{local:Loc 'Переключить ветку'}" Click="Switch_Click" Margin="0,8,0,0" /><Button Content="{local:Loc 'Новая ветка…'}" Click="NewBranch_Click" Margin="0,8,0,0" /><Button Content="IDE" Tag="ide" Click="Launch_Click" Margin="0,24,0,0" /><Button Content="{local:Loc 'Терминал'}" Tag="terminal" Click="Launch_Click" Margin="0,8,0,0" /><Button Content="{local:Loc 'Папка'}" Tag="folder" Click="Launch_Click" Margin="0,8,0,0" /></StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

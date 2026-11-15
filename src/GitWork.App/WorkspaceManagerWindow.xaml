@@ -1,0 +1,79 @@
+<Window x:Class="GitWork.App.WorkspaceManagerWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'Комплекты проекта · Git Work'}" Width="1230" Height="850" MinWidth="1030" MinHeight="650" Style="{StaticResource {x:Type Window}}" WindowStartupLocation="CenterOwner" Loaded="Window_Loaded">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <Border Background="{DynamicResource SurfaceBrush}" Padding="24,20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock x:Name="ProjectTitle" FontSize="25" FontWeight="SemiBold" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="1" x:Name="ManagerContent">
+      <Grid Margin="24,20" x:Name="SelectedPanel" IsEnabled="False">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition />
+        </Grid.RowDefinitions>
+        <StackPanel>
+          <TextBlock x:Name="WorkspaceTitle" Text="{local:Loc 'Создайте или выберите комплект'}" FontSize="26" FontWeight="SemiBold" />
+          <TextBlock x:Name="WorkspacePath" Style="{StaticResource Caption}" Margin="0,7,0,0" />
+        </StackPanel>
+        <WrapPanel Grid.Row="1" Margin="0,18,0,0">
+          <Button Content="{local:Loc 'Переименовать'}" Click="Rename_Click" Margin="0,0,8,8" />
+          <Button Content="{local:Loc '↻ Обновить'}" Click="Refresh_Click" Margin="0,0,8,8" />
+          <Button Content="{local:Loc 'Удалить комплект…'}" Click="Remove_Click" Foreground="{DynamicResource WarningBrush}" Background="Transparent" Margin="0,0,0,8" />
+        </WrapPanel>
+        <TextBlock Grid.Row="2" x:Name="SummaryLabel" Margin="0,5,0,16" Foreground="{DynamicResource AccentBrush}" />
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+          <ItemsControl x:Name="RepositoryRows">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="9" Padding="16" Margin="0,0,8,13">
+                  <StackPanel>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" Margin="0,0,15,0" />
+                      <TextBlock Grid.Column="1" Text="{Binding BranchLabel}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Text="{Binding Path}" Style="{StaticResource Caption}" Margin="0,7,0,0" />
+                    <TextBlock Text="{Binding StatusLabel,Converter={x:Static local:L10n.StringConverter}}" Style="{StaticResource Caption}" Margin="0,8,0,0" />
+                    <Grid Margin="0,13,0,0">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <Button Grid.Column="1" Content="{local:Loc 'Убрать…'}" Click="RemoveRepository_Click" Padding="10,8" ToolTip="{local:Loc 'Убрать репозиторий из комплекта'}" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+    <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="22,12">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <ProgressBar x:Name="Progress" Width="50" Height="3" IsIndeterminate="True" Foreground="{DynamicResource AccentBrush}" Margin="0,0,12,0" Visibility="Collapsed" />
+        <TextBlock Grid.Column="1" x:Name="StatusText" Text="{local:Loc 'Чтение комплекта…'}" Style="{StaticResource Caption}" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

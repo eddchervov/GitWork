@@ -1,0 +1,40 @@
+<Window x:Class="GitWork.App.CommitOperationWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'Операция с коммитом'}" Width="520" SizeToContent="Height" MinHeight="300" MaxHeight="760" WindowStartupLocation="CenterOwner" ResizeMode="CanResize" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
+  <Grid Margin="20">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <TextBlock x:Name="TitleText" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+    <TextBox x:Name="SourceText" Grid.Row="1" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource MutedBrush}" Padding="0" Margin="0,0,0,16" />
+    <StackPanel x:Name="BranchFields" Grid.Row="2" Visibility="Collapsed">
+      <TextBlock Text="{local:Loc 'Имя новой ветки'}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,5" />
+      <TextBox x:Name="BranchName" Text="feature/" />
+      <CheckBox x:Name="CheckoutBranch" Content="{local:Loc 'Переключиться на новую ветку'}" Margin="0,10,0,0" />
+    </StackPanel>
+    <StackPanel x:Name="WorktreeFields" Grid.Row="2" Visibility="Collapsed">
+      <TextBlock Text="{local:Loc 'Новая ветка и папка worktree'}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,5" />
+      <TextBox x:Name="WorktreeBranchName" Text="feature/" />
+      <TextBlock Text="{local:Loc 'Папка'}" Foreground="{DynamicResource MutedBrush}" Margin="0,10,0,5" />
+      <TextBox x:Name="WorktreePath" />
+    </StackPanel>
+    <StackPanel x:Name="CherryFields" Grid.Row="2" Visibility="Collapsed">
+      <TextBlock Text="{local:Loc 'Целевая локальная ветка'}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,5" />
+      <ComboBox x:Name="TargetBranch" DisplayMemberPath="DisplayName" SelectionChanged="TargetBranch_Changed" />
+      <TextBlock x:Name="TargetBranchNote" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" />
+      <StackPanel x:Name="MergeParentFields" Visibility="Collapsed" Margin="0,12,0,0">
+        <TextBlock Text="{local:Loc 'Основной родитель merge-коммита'}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,5" />
+        <ComboBox x:Name="MergeParent" SelectionChanged="MergeParent_Changed" />
+      </StackPanel>
+    </StackPanel>
+    <TextBlock x:Name="ErrorText" Grid.Row="3" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Margin="0,14,0,0" />
+    <ProgressBar x:Name="Progress" Grid.Row="4" Height="3" IsIndeterminate="True" Visibility="Collapsed" Margin="0,12,0,0" />
+    <DockPanel Grid.Row="5" LastChildFill="False" HorizontalAlignment="Right" Margin="0,20,0,0">
+      <Button x:Name="CancelButton" Content="{local:Loc 'Отмена'}" IsCancel="True" Padding="14,7" Margin="0,0,8,0" Click="Cancel_Click" />
+      <Button x:Name="RunButton" Content="{local:Loc 'Продолжить'}" IsDefault="True" Style="{StaticResource PrimaryButton}" Padding="14,7" Click="Run_Click" />
+    </DockPanel>
+  </Grid>
+</Window>

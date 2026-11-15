@@ -1,0 +1,35 @@
+<Window x:Class="GitWork.App.WorkspaceLaunchWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'Открыть рабочее окружение'}" Width="660" Height="510" MinWidth="600" MinHeight="430" WindowStartupLocation="CenterOwner" Style="{StaticResource {x:Type Window}}">
+  <Grid Margin="26">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <TextBlock Text="{local:Loc 'Открыть комплект'}" FontSize="23" FontWeight="SemiBold" />
+    <TextBlock Grid.Row="1" x:Name="WorkspaceLabel" Style="{StaticResource Caption}" Margin="0,10,0,20" />
+    <StackPanel Grid.Row="2" Margin="0,0,0,20">
+      <CheckBox x:Name="OpenIdeOption" IsChecked="True" Content="{local:Loc 'Решение в IDE'}" Margin="0,0,0,12" ToolTip="{local:Loc 'Решение основного репозитория'}" />
+      <CheckBox x:Name="OpenTerminalsOption" IsChecked="True" Content="{local:Loc 'Терминалы репозиториев'}" ToolTip="{local:Loc 'Отдельный терминал в каждой рабочей копии'}" />
+    </StackPanel>
+    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+      <ItemsControl x:Name="Targets">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="7" Padding="12" Margin="0,0,0,8">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Path}" Style="{StaticResource Caption}" Margin="0,5,0,0" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+      <Button Content="{local:Loc 'Отмена'}" IsCancel="True" Margin="0,0,10,0" />
+      <Button Content="{local:Loc 'Открыть'}" IsDefault="True" Style="{StaticResource PrimaryButton}" Click="Open_Click" />
+    </StackPanel>
+  </Grid>
+</Window>

@@ -1,0 +1,337 @@
+<Window x:Class="GitWork.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="Git Work" Width="1380" Height="860" MinWidth="1080" MinHeight="680" WindowStartupLocation="CenterScreen" WindowState="Maximized" Loaded="Window_Loaded" Style="{StaticResource {x:Type Window}}" Background="{DynamicResource BackgroundBrush}">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <Menu x:Name="MainMenu" IsEnabled="{Binding IsEnabled, ElementName=Workspace}">
+      <MenuItem Header="{local:Loc '_Файл'}">
+        <MenuItem Header="{local:Loc 'Создать комплект…'}" Click="CreateBundle_Click" />
+        <MenuItem Header="{local:Loc 'Создать отдельный worktree…'}" Click="CreateWorktree_Click" IsEnabled="False" x:Name="CreateWorktreeMenuItem" />
+        <Separator />
+        <MenuItem Header="{local:Loc 'Добавить репозиторий…'}" Click="AddRepository_Click" />
+        <MenuItem Header="{local:Loc 'Папки поиска worktree…'}" Click="ChangeRoot_Click" />
+        <MenuItem Header="{local:Loc 'Обновить'}" Click="Refresh_Click" />
+        <MenuItem x:Name="AutoRefreshMenuItem" Header="{local:Loc 'Автообновление'}" IsCheckable="True" IsChecked="True" Click="AutoRefresh_Click" />
+        <MenuItem Header="{local:Loc 'Инструменты…'}" Click="Tools_Click" />
+        <MenuItem Header="{local:Loc 'Язык / Language'}">
+          <MenuItem x:Name="RussianLanguageItem" Header="{local:Loc 'Русский'}" Tag="ru" IsCheckable="True" IsChecked="True" Click="Language_Click" />
+          <MenuItem x:Name="EnglishLanguageItem" Header="English" Tag="en" IsCheckable="True" Click="Language_Click" />
+        </MenuItem>
+        <Separator />
+        <MenuItem Header="{local:Loc 'Выход'}" Click="Exit_Click" />
+      </MenuItem>
+      <MenuItem Header="{local:Loc '_Справка'}">
+        <MenuItem Header="{local:Loc 'Проверить обновления…'}" Click="CheckUpdates_Click" />
+        <Separator />
+        <MenuItem Header="{local:Loc 'О программе…'}" Click="About_Click" />
+      </MenuItem>
+    </Menu>
+    <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="18,10">
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="gw" Foreground="{DynamicResource AccentBrush}" FontSize="20" FontWeight="Bold" Margin="0,0,14,0" /><TextBlock Text="Git Work" FontSize="20" FontWeight="SemiBold" Margin="0,0,30,0" /><RadioButton Style="{StaticResource NavigationTab}" x:Name="RepositoriesSection" Content="{local:Loc 'Репозитории'}" GroupName="MainSection" Tag="Repositories" Checked="MainSection_Changed" Margin="0,0,20,0" /><RadioButton Style="{StaticResource NavigationTab}" x:Name="WorktreesSection" Content="Worktree" GroupName="MainSection" Tag="Worktrees" Checked="MainSection_Changed" /></StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button x:Name="UpdatesButton" Click="CheckUpdates_Click" Padding="9,6" Margin="0,0,10,0" ToolTip="{local:Loc 'Проверить обновления'}" AutomationProperties.Name="{local:Loc 'Обновления'}">
+            <Grid Width="22" Height="22">
+              <Viewbox Width="20" Height="20"><Canvas Width="24" Height="24"><Path Stroke="{DynamicResource TextBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M 6,10 C 6,6 8,4 12,4 C 16,4 18,6 18,10 L 18,14 L 20,17 L 4,17 L 6,14 Z M 10,20 C 10,22 14,22 14,20 M 12,2 L 12,4" /></Canvas></Viewbox>
+              <Ellipse x:Name="UpdateBadge" Width="7" Height="7" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed" />
+            </Grid>
+          </Button>
+          <ComboBox x:Name="ThemePicker" Width="150" VerticalAlignment="Center" SelectedValuePath="Tag" SelectionChanged="ThemePicker_SelectionChanged" AutomationProperties.Name="{local:Loc 'Тема приложения'}"><ComboBoxItem Content="{local:Loc 'Светлая тема'}" Tag="Light" /><ComboBoxItem Content="{local:Loc 'Тёмная тема'}" Tag="Dark" /></ComboBox>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <ContentControl x:Name="GitClientHost" Grid.Row="2" Visibility="Collapsed" />
+    <Grid Grid.Row="2" x:Name="Workspace">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition x:Name="SidebarColumn" Width="310" MinWidth="210" MaxWidth="640" />
+        <ColumnDefinition Width="9" />
+        <ColumnDefinition Width="*" MinWidth="340" />
+        <ColumnDefinition Width="0" />
+        <ColumnDefinition x:Name="WorktreeActionsColumn" Width="0" />
+      </Grid.ColumnDefinitions>
+      <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+        <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Margin="12,20,8,16">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <StackPanel Margin="8,0,8,14">
+            <TextBlock Text="{local:Loc 'РАБОЧИЕ КОПИИ'}" Style="{StaticResource Caption}" />
+            <TextBlock x:Name="NavigationCount" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+          </StackPanel>
+          <Grid Grid.Row="1" Margin="5,0,7,12">
+            <TextBox x:Name="RepositorySearch" TextChanged="RepositorySearch_TextChanged" AutomationProperties.Name="{local:Loc 'Поиск комплектов и worktree'}" ToolTip="{local:Loc 'Поиск по названию, ветке и пути'}" />
+            <TextBlock Text="{local:Loc 'Комплект, ветка или путь…'}" IsHitTestVisible="False" Margin="10,0" VerticalAlignment="Center">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Text.Length, ElementName=RepositorySearch}" Value="0">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Grid>
+          <ComboBox Grid.Row="2" x:Name="NavigationModePicker" SelectedValuePath="Tag" SelectedValue="All" SelectionChanged="NavigationModePicker_SelectionChanged" AutomationProperties.Name="{local:Loc 'Показывать рабочие копии'}" Margin="5,0,7,12">
+            <ComboBoxItem Content="{local:Loc 'Все worktree'}" Tag="All" />
+            <ComboBoxItem Content="{local:Loc 'Только комплекты'}" Tag="Bundles" />
+            <ComboBoxItem Content="{local:Loc 'Только отдельные копии'}" Tag="Loose" />
+            <ComboBoxItem Content="{local:Loc '★ Избранные комплекты'}" Tag="Favorites" />
+            <ComboBoxItem Content="{local:Loc 'Недавние комплекты'}" Tag="Recent" />
+          </ComboBox>
+          <TreeView Grid.Row="3" x:Name="RepositoryTree" SelectedItemChanged="RepositoryTree_SelectedItemChanged" AutomationProperties.Name="{local:Loc 'Комплекты и рабочие копии'}">
+            <TreeView.ItemTemplate>
+              <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                <DockPanel LastChildFill="True">
+                  <TextBlock xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" DockPanel.Dock="Right" Text="{Binding Status.Label}" ToolTip="{Binding Status.Description}" FontSize="11" Margin="8,2,0,0" VerticalAlignment="Top">
+                    <TextBlock.Style>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding Status.HasProblems}" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </TextBlock.Style>
+                  </TextBlock>
+                  <StackPanel ToolTip="{Binding ToolTip}">
+                    <TextBlock FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+                      <Run><Run.Text><MultiBinding Mode="OneWay" Converter="{x:Static local:L10n.NavigationTitleConverter}"><Binding Path="Title" Mode="OneWay" /><Binding Path="Kind" Mode="OneWay" /><Binding Path="CurrentLanguage" Source="{x:Static local:L10n.Instance}" Mode="OneWay" /></MultiBinding></Run.Text></Run>
+                      <Run Text="  " />
+                      <Run Text="{Binding CountLabel, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding Subtitle}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Kind}" Value="Section">
+                              <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Subtitle}" Value="">
+                              <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                </DockPanel>
+              </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+          </TreeView>
+          <Button Grid.Row="4" Content="{local:Loc 'Папки поиска worktree…'}" Click="ChangeRoot_Click" HorizontalAlignment="Stretch" Margin="5,12,7,0" ToolTip="{local:Loc 'Папки для автоматического поиска рабочих копий'}" />
+        </Grid>
+      </Border>
+      <GridSplitter Grid.Column="1" Width="9" HorizontalAlignment="Stretch" Background="{DynamicResource BackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" DragCompleted="SidebarSplitter_DragCompleted" ToolTip="{local:Loc 'Потяните, чтобы изменить ширину навигации'}" AutomationProperties.Name="{local:Loc 'Ширина списка рабочих копий'}">
+        <GridSplitter.Template>
+          <ControlTemplate TargetType="GridSplitter">
+            <Border x:Name="Grip" Background="{TemplateBinding Background}">
+              <Border Width="3" Height="48" CornerRadius="2" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Grip" Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </GridSplitter.Template>
+      </GridSplitter>
+      <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Grid.Column="2" Margin="24,23,20,20" x:Name="RepositoryContent">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel>
+          <TextBlock x:Name="RepositoryTitle" Text="{local:Loc 'Выберите рабочую копию'}" FontSize="26" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+          <TextBlock x:Name="RepositoryPath" Style="{StaticResource Caption}" Margin="0,7,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text,RelativeSource={RelativeSource Self}}" />
+        </StackPanel>
+        <DockPanel Grid.Row="1" Margin="0,24,0,12">
+          <Button DockPanel.Dock="Right" Content="{local:Loc 'Действия'}" Click="ToggleWorktreeActions_Click" Margin="8,0,0,0" />
+          <Button x:Name="DiffButton" DockPanel.Dock="Right" Content="{local:Loc 'Открыть изменения'}" Click="ShowDiff_Click" Padding="10,6" IsEnabled="False" />
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="{local:Loc 'Изменения'}" FontWeight="SemiBold" />
+            <TextBlock x:Name="ChangesLabel" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+          </StackPanel>
+        </DockPanel>
+        <Grid Grid.Row="2">
+          <ListBox x:Name="FilesList" MouseDoubleClick="FilesList_MouseDoubleClick" AutomationProperties.Name="{local:Loc 'Изменённые файлы'}" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="32" />
+                    <ColumnDefinition />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="{Binding Status}" FontFamily="Consolas" Foreground="{DynamicResource WarningBrush}" />
+                  <TextBlock Grid.Column="1" Text="{Binding DisplayPath}" FontSize="12" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                <Setter Property="Padding" Value="6,9" />
+                <Setter Property="Margin" Value="0" />
+              </Style>
+            </ListBox.ItemContainerStyle>
+          </ListBox>
+          <TextBlock x:Name="CleanLabel" Text="{local:Loc 'Нет изменений'}" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Margin="6,18" />
+          <StackPanel x:Name="EmptyState" VerticalAlignment="Center" Margin="20">
+            <TextBlock x:Name="EmptyTitle" Text="{local:Loc 'Выберите рабочую копию'}" FontSize="21" FontWeight="SemiBold" TextAlignment="Center" />
+            <TextBlock x:Name="EmptyHint" Style="{StaticResource Caption}" TextAlignment="Center" Margin="0,10,0,0" />
+          </StackPanel>
+        </Grid>
+      </Grid>
+      <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch" Background="Transparent" />
+      <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Grid.Column="4" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" x:Name="WorktreeDetailBorder">
+        <StackPanel Margin="20,25,20,18" x:Name="DetailPanel" IsEnabled="False">
+          <DockPanel Margin="0,0,0,6">
+            <Button Content="×" DockPanel.Dock="Right" Click="CloseWorktreeActions_Click" Padding="8,3" AutomationProperties.Name="{local:Loc 'Закрыть действия репозитория'}" />
+            <TextBox x:Name="ActionTargetName" Style="{StaticResource SelectableText}" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </DockPanel>
+          <TextBox x:Name="ActionTargetPath" Style="{StaticResource SelectableText}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,0,0,18" />
+          <TextBlock Text="{local:Loc 'Ветка'}" Style="{StaticResource Caption}" Margin="0,0,0,8" />
+          <Grid>
+            <ComboBox x:Name="BranchPicker" DisplayMemberPath="DisplayName" AutomationProperties.Name="{local:Loc 'Ветка рабочей копии'}" />
+            <TextBlock Text="{local:Loc 'Выберите ветку'}" IsHitTestVisible="False" Margin="10,0,30,0" VerticalAlignment="Center">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectedIndex,ElementName=BranchPicker}" Value="-1">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Grid>
+          <Button x:Name="SwitchButton" Content="{local:Loc 'Переключить'}" Click="SwitchBranch_Click" Margin="0,9,0,0" />
+          <Button x:Name="NewBranchButton" Content="{local:Loc 'Новая ветка…'}" Click="CreateBranch_Click" Margin="0,8,0,0" />
+          <TextBlock x:Name="BranchHint" Style="{StaticResource Caption}" Margin="0,9,0,0" />
+          <UniformGrid Columns="3" Margin="0,20,0,0">
+            <Button Content="IDE" Click="OpenIde_Click" Margin="0,0,6,0" Padding="4,9" />
+            <Button Content="{local:Loc 'Терминал'}" Click="OpenTerminal_Click" Margin="0,0,6,0" Padding="4,9" />
+            <Button Content="{local:Loc 'Папка'}" Click="OpenFolder_Click" Padding="4,9" />
+          </UniformGrid>
+        </StackPanel>
+      </Border>
+      <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" x:Name="BundleOverview" Grid.Column="2" Margin="26,25,24,20" Visibility="Collapsed">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition />
+        </Grid.RowDefinitions>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <StackPanel Margin="0,0,18,0">
+            <TextBlock Text="{local:Loc 'КОМПЛЕКТ'}" Style="{StaticResource Caption}" />
+            <TextBlock x:Name="BundleTitle" FontSize="29" FontWeight="SemiBold" Margin="0,8,0,0" />
+            <TextBlock x:Name="BundlePath" Style="{StaticResource Caption}" Margin="0,8,0,0" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" VerticalAlignment="Top" Orientation="Horizontal">
+            <Button Content="{local:Loc 'Настройки'}" Style="{StaticResource PrimaryButton}" Click="ConfigureBundle_Click" />
+            <Button x:Name="FavoriteButton" Content="☆" Click="ToggleFavorite_Click" Margin="8,0,0,0" ToolTip="{local:Loc 'В избранное'}" Padding="10,6" FontSize="19" />
+          </StackPanel>
+        </Grid>
+        <TextBlock Grid.Row="2" x:Name="BundleSummary" Foreground="{DynamicResource AccentBrush}" Margin="0,22,0,18" />
+        <Grid Grid.Row="3">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" MaxHeight="420" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+          </Grid.RowDefinitions>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="BundleRepositoryRows">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="9" Padding="12" Margin="0,0,10,8" ToolTip="{Binding Path}">
+                    <StackPanel>
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                          <TextBlock Text="{Binding BranchLabel}" Foreground="{DynamicResource AccentBrush}" Margin="12,0" VerticalAlignment="Center" MaxWidth="170" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding BranchLabel}" />
+                          <Button Content="{local:Loc 'Открыть Git'}" Click="OpenBundleRowGit_Click" IsEnabled="{Binding IsAvailable}" Padding="9,5" ToolTip="{local:Loc 'История коммитов и граф этого репозитория'}" /><Button Content="{local:Loc 'Действия'}" Click="OpenBundleRowActions_Click" IsEnabled="{Binding IsAvailable}" Padding="9,5" Margin="6,0,0,0" />
+                        </StackPanel>
+                      </Grid>
+                      <TextBlock Text="{Binding StatusLabel,Converter={x:Static local:L10n.StringConverter}}" Margin="0,5,0,0">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding StatusLabel}" Value="Нет изменений">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                                <Setter Property="Visibility" Value="Collapsed" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <DockPanel Grid.Row="1" Margin="0,16,0,12">
+            <Button DockPanel.Dock="Right" Content="{local:Loc 'Открыть изменения'}" Click="ShowBundleChanges_Click" Padding="12,7" x:Name="BundleChangesButton" />
+            <TextBlock x:Name="BundleChangesLabel" Text="{local:Loc 'ИЗМЕНЕНИЯ КОМПЛЕКТА'}" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </DockPanel>
+          <Grid Grid.Row="2">
+            <ListBox x:Name="BundleFilesList" MouseDoubleClick="BundleFilesList_MouseDoubleClick" AutomationProperties.Name="{local:Loc 'Изменения всех репозиториев комплекта'}">
+              <ListBox.GroupStyle>
+                <GroupStyle>
+                  <GroupStyle.HeaderTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="6,8,0,8" />
+                    </DataTemplate>
+                  </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+              </ListBox.GroupStyle>
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding StatusLabel}" Foreground="{DynamicResource WarningBrush}" FontFamily="Consolas" Width="34" />
+                    <TextBlock Text="{Binding DisplayPath}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding DisplayPath}" />
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock x:Name="BundleCleanLabel" Text="{local:Loc 'Во всех доступных копиях нет изменений'}" Foreground="{DynamicResource AccentBrush}" Margin="6,12" Visibility="Collapsed" />
+          </Grid>
+        </Grid>
+      </Grid>
+      <ContentControl x:Name="InlineGitHost" Grid.Column="2" Grid.ColumnSpan="3" Visibility="Collapsed" />
+    </Grid>
+    <Border x:Name="OperationOverlay" Grid.Row="2" Panel.ZIndex="20" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="28" MaxWidth="620" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"><StackPanel><TextBlock Text="{local:Loc 'Выполняется операция'}" FontSize="20" FontWeight="SemiBold" /><ProgressBar Height="5" IsIndeterminate="True" Margin="0,18,0,14" /><TextBlock x:Name="OperationMessage" TextWrapping="Wrap" /><TextBlock Text="{local:Loc 'Дождитесь завершения. Результат появится здесь.'}" Style="{StaticResource Caption}" Margin="0,12,0,0" /></StackPanel></Border>
+    <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="20,11">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ProgressBar x:Name="BusyProgress" Width="55" Height="3" IsIndeterminate="True" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Margin="0,0,12,0" />
+        <TextBlock Grid.Column="1" x:Name="StatusText" Text="{local:Loc 'Готово'}" FontSize="12" Foreground="{DynamicResource MutedBrush}" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

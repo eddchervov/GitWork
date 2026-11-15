@@ -1,0 +1,48 @@
+<Window x:Class="GitWork.App.SelectWorkspaceRepositoriesWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'Состав нового комплекта'}" Width="680" Height="650" MinWidth="550" MinHeight="480" Style="{StaticResource {x:Type Window}}" WindowStartupLocation="CenterOwner">
+  <Grid Margin="28">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <StackPanel Margin="0,0,0,20">
+      <TextBlock Text="{local:Loc 'Исходные репозитории'}" FontSize="25" FontWeight="SemiBold" /><TextBlock Text="{local:Loc 'Для каждого создадим новую рабочую копию. Основные папки останутся на месте.'}" Style="{StaticResource Caption}" Margin="0,8,0,0" />
+    </StackPanel>
+    <TextBox Grid.Row="1" x:Name="SearchBox" TextChanged="SearchBox_TextChanged" AutomationProperties.Name="{local:Loc 'Поиск репозиториев'}" ToolTip="{local:Loc 'Поиск по имени и пути'}" Margin="0,0,0,12" />
+    <ListBox Grid.Row="2" x:Name="ChoicesList"><ListBox.GroupStyle><GroupStyle><GroupStyle.HeaderTemplate><DataTemplate><TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,12,0,8" /></DataTemplate></GroupStyle.HeaderTemplate></GroupStyle></ListBox.GroupStyle>
+      <ListBox.ItemTemplate>
+        <DataTemplate>
+          <CheckBox IsChecked="{Binding IsIncluded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Checked="Choice_Checked" Unchecked="Choice_Checked">
+            <StackPanel>
+              <TextBlock Text="{Binding Repository.Name}" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding Repository.Path}" Style="{StaticResource Caption}" Margin="0,5,0,0" />
+            </StackPanel>
+          </CheckBox>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <StackPanel Grid.Row="3" Margin="0,16,0,0">
+      <TextBlock Text="{local:Loc 'Основной репозиторий'}" Style="{StaticResource Caption}" Margin="0,0,0,7" />
+      <ComboBox x:Name="PrimaryPicker" AutomationProperties.Name="{local:Loc 'Основной репозиторий комплекта'}" ToolTip="{local:Loc 'Его решение будет открываться в IDE'}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding Name}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+    </StackPanel>
+    <Grid Grid.Row="4" Margin="0,18,0,0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <TextBlock x:Name="ValidationText" Foreground="{DynamicResource WarningBrush}" Margin="0,0,15,0" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <Button Content="{local:Loc 'Отмена'}" IsCancel="True" Margin="0,0,10,0" />
+        <Button Content="{local:Loc 'Далее →'}" Style="{StaticResource PrimaryButton}" Click="Continue_Click" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

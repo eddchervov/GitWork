@@ -1,0 +1,18 @@
+<Window x:Class="GitWork.App.AboutWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'О программе · Git Work'}" Width="490" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Style="{StaticResource {x:Type Window}}">
+  <StackPanel Margin="30">
+    <TextBlock Text="Git Work" FontSize="28" FontWeight="SemiBold" />
+    <TextBlock x:Name="VersionText" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+    <TextBlock Text="{local:Loc 'Git-клиент и рабочее пространство для worktree.'}" Style="{StaticResource Caption}" Margin="0,14,0,22" />
+    <Border Background="{DynamicResource RaisedBrush}" CornerRadius="9" Padding="16">
+      <StackPanel>
+        <TextBlock Text="{local:Loc 'Автор'}" Style="{StaticResource Caption}" />
+        <TextBlock Margin="0,4,0,14"><Hyperlink NavigateUri="https://github.com/eddchervov" RequestNavigate="GitHub_RequestNavigate" Foreground="{DynamicResource AccentBrush}">eddchervov</Hyperlink></TextBlock>
+        <TextBlock Text="{local:Loc 'Исходный код'}" Style="{StaticResource Caption}" />
+        <TextBlock Margin="0,4,0,14"><Hyperlink NavigateUri="https://github.com/eddchervov/GitWork" RequestNavigate="GitHub_RequestNavigate" Foreground="{DynamicResource AccentBrush}">github.com/eddchervov/GitWork</Hyperlink></TextBlock>
+        <TextBlock><Hyperlink NavigateUri="https://opensource.org/license/mit" RequestNavigate="GitHub_RequestNavigate" Foreground="{DynamicResource AccentBrush}"><Run Text="{local:Loc 'Лицензия MIT'}" /></Hyperlink></TextBlock>
+        <TextBlock Text="© 2026 eddchervov" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+      </StackPanel>
+    </Border>
+    <Button Content="{local:Loc 'Закрыть'}" IsCancel="True" IsDefault="True" HorizontalAlignment="Right" Margin="0,24,0,0" Padding="24,8" />
+  </StackPanel>
+</Window>

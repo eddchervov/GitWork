@@ -1,0 +1,36 @@
+<Window x:Class="GitWork.App.CreateWorktreeWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'Новый worktree · Git Work'}" Width="600" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Style="{StaticResource {x:Type Window}}">
+  <StackPanel Margin="30">
+    <TextBlock Text="{local:Loc 'Новая рабочая копия'}" FontSize="26" FontWeight="SemiBold" />
+    <TextBlock x:Name="RepositoryLabel" Style="{StaticResource Caption}" Margin="0,8,0,25" />
+    <TextBlock Text="{local:Loc 'Какую ветку использовать'}" Style="{StaticResource Caption}" Margin="0,0,0,8" />
+    <ComboBox x:Name="ModePicker" SelectionChanged="ModePicker_SelectionChanged" SelectedIndex="0" AutomationProperties.Name="{local:Loc 'Режим создания ветки'}">
+      <ComboBoxItem Content="{local:Loc 'Создать новую ветку'}" />
+      <ComboBoxItem Content="{local:Loc 'Использовать существующую ветку'}" />
+    </ComboBox>
+    <StackPanel x:Name="NewBranchPanel" Margin="0,18,0,0">
+      <TextBlock Text="{local:Loc 'Имя новой ветки'}" Style="{StaticResource Caption}" Margin="0,0,0,8" />
+      <TextBox x:Name="BranchNameBox" Text="feature/" TextChanged="BranchNameBox_TextChanged" AutomationProperties.Name="{local:Loc 'Имя новой ветки'}" />
+      <TextBlock Text="{local:Loc 'Создать от ветки'}" Style="{StaticResource Caption}" Margin="0,18,0,8" />
+      <ComboBox x:Name="BasePicker" DisplayMemberPath="Name" AutomationProperties.Name="{local:Loc 'Исходная ветка'}" />
+    </StackPanel>
+    <StackPanel x:Name="ExistingBranchPanel" Visibility="Collapsed" Margin="0,18,0,0">
+      <TextBlock Text="{local:Loc 'Свободная локальная ветка'}" Style="{StaticResource Caption}" Margin="0,0,0,8" />
+      <ComboBox x:Name="ExistingPicker" DisplayMemberPath="DisplayName" AutomationProperties.Name="{local:Loc 'Существующая ветка'}" SelectionChanged="ExistingPicker_SelectionChanged" />
+      <TextBlock Text="{local:Loc 'Ветки, занятые в других worktree, недоступны.'}" Style="{StaticResource Caption}" Margin="0,8,0,0" />
+    </StackPanel>
+    <TextBlock Text="{local:Loc 'Папка новой рабочей копии'}" Style="{StaticResource Caption}" Margin="0,20,0,8" />
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <TextBox x:Name="TargetPathBox" AutomationProperties.Name="{local:Loc 'Папка нового worktree'}" />
+      <Button Grid.Column="1" Content="…" Click="Browse_Click" Margin="8,0,0,0" ToolTip="{local:Loc 'Выбрать родительскую папку'}" />
+    </Grid>
+    <TextBlock x:Name="ValidationText" Foreground="{DynamicResource WarningBrush}" Margin="0,12,0,0" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+      <Button Content="{local:Loc 'Отмена'}" IsCancel="True" Margin="0,0,10,0" />
+      <Button Content="{local:Loc 'Создать worktree'}" Style="{StaticResource PrimaryButton}" Click="Create_Click" IsDefault="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>
