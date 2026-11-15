@@ -528,5 +528,10 @@
   "Есть незакоммиченные изменения:\n{0}\n\nОни будут безвозвратно удалены вместе с рабочими копиями. Продолжить?": "There are uncommitted changes:\n{0}\n\nThey will be permanently deleted with the working copies. Continue?",
   "Незакоммиченные изменения: {0} файлов. При удалении с диска они будут безвозвратно потеряны. При удалении только из комплекта файлы сохранятся.": "Uncommitted changes: {0} files. Deleting from disk will permanently discard them. Removing only from the workspace will preserve the files.",
   "Удалить рабочую папку?\n\n{0}\n\nВетка {1} останется.": "Delete the working directory?\n\n{0}\n\nBranch {1} will be preserved.",
-  "Незакоммиченные изменения: {0} файлов. Они будут безвозвратно удалены. Продолжить?": "Uncommitted changes: {0} files. They will be permanently deleted. Continue?"
+  "Незакоммиченные изменения: {0} файлов. Они будут безвозвратно удалены. Продолжить?": "Uncommitted changes: {0} files. They will be permanently deleted. Continue?",
+  "Удалить все рабочие копии этого комплекта?\n\n{0}\n\nВетки и основные репозитории сохранятся.": "Delete all working copies in this workspace?\n\n{0}\n\nBranches and main repositories will be preserved.",
+  "Удалить комплект вместе с общей папкой?\n\n{0}\n\nБудут удалены все рабочие копии и всё содержимое этой папки. Ветки и основные репозитории сохранятся.": "Delete the workspace and its root folder?\n\n{0}\n\nAll working copies and all contents of this folder will be deleted. Branches and main repositories will be preserved.",
+  "Также будут удалены файлы и папки рядом с рабочими копиями:\n{0}": "Files and folders next to the working copies will also be deleted:\n{0}",
+  "Общая папка не удалена": "Root folder was not deleted",
+  "Рабочие копии удалены, но не удалось удалить общую папку:\n{0}\n\n{1}": "Working copies were deleted, but the root folder could not be deleted:\n{0}\n\n{1}"
 }

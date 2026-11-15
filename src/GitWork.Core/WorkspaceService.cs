@@ -127,7 +127,8 @@ public sealed class WorkspaceService(GitService git)
     public async Task ValidateRemovalAsync(
         ProjectWorkspace workspace,
         IReadOnlyCollection<ProjectWorkspace>? allWorkspaces = null,
-        bool allowUncommittedChanges = false)
+        bool allowUncommittedChanges = false,
+        string? rootPathToDelete = null)
     {
         if (workspace.WorktreePaths.Count == 0)
         {
@@ -138,6 +139,11 @@ public sealed class WorkspaceService(GitService git)
         {
             var trees = await this._git.GetWorktreesAsync(pair.Key);
             var tree = trees.FirstOrDefault(item => GitService.PathsEqual(item.Path, pair.Value));
+
+            if (rootPathToDelete is not null && tree is null && !Directory.Exists(pair.Value))
+            {
+                continue;
+            }
 
             if (!WorkspaceService.CanRemove(tree))
             {
@@ -155,26 +161,55 @@ public sealed class WorkspaceService(GitService git)
                 throw new GitException($"Копия {pair.Value} используется другим комплектом. Удаление всего комплекта отменено.");
             }
         }
+
+        if (rootPathToDelete is not null)
+        {
+            await WorkspaceDirectoryRemoval.ValidateAsync(workspace, rootPathToDelete, allWorkspaces ?? [], this._git);
+        }
     }
 
     public async Task<WorkspaceRemovalResult> RemoveAsync(
         ProjectWorkspace workspace,
         IReadOnlyCollection<ProjectWorkspace>? allWorkspaces = null,
-        bool allowUncommittedChanges = false)
+        bool allowUncommittedChanges = false,
+        string? rootPathToDelete = null)
     {
-        await this.ValidateRemovalAsync(workspace, allWorkspaces, allowUncommittedChanges);
+        await this.ValidateRemovalAsync(workspace, allWorkspaces, allowUncommittedChanges, rootPathToDelete);
         var removed = new List<string>();
 
         foreach (var pair in workspace.WorktreePaths)
         {
             try
             {
+                if (rootPathToDelete is not null)
+                {
+                    var trees = await this._git.GetWorktreesAsync(pair.Key);
+                    if (!trees.Any(tree => GitService.PathsEqual(tree.Path, pair.Value)) && !Directory.Exists(pair.Value))
+                    {
+                        removed.Add(pair.Value);
+                        continue;
+                    }
+                }
+
                 await this._git.RemoveWorktreeAsync(pair.Key, pair.Value, allowUncommittedChanges);
                 removed.Add(pair.Value);
             }
             catch (Exception exception) when (exception is GitException or IOException or UnauthorizedAccessException)
             {
                 return new WorkspaceRemovalResult(removed, pair.Value, exception.Message);
+            }
+        }
+
+        if (rootPathToDelete is not null)
+        {
+            try
+            {
+                var root = await WorkspaceDirectoryRemoval.ValidateAsync(workspace, rootPathToDelete, allWorkspaces ?? [], this._git);
+                WorkspaceDirectoryRemoval.Delete(root);
+            }
+            catch (Exception exception) when (exception is GitException or IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                return new WorkspaceRemovalResult(removed, rootPathToDelete, exception.Message);
             }
         }
 

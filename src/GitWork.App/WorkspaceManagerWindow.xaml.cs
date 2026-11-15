@@ -184,10 +184,17 @@ public partial class WorkspaceManagerWindow : Window
         await this.ExecuteAsync(async () =>
         {
             var service = new WorkspaceService(this._git);
-            await service.ValidateRemovalAsync(workspace, this._settings.Workspaces, allowUncommittedChanges: true);
+            var rootPath = workspace.RootPath;
+            await service.ValidateRemovalAsync(workspace, this._settings.Workspaces,
+                allowUncommittedChanges: true, rootPathToDelete: rootPath);
             var changedCopies = new List<string>();
             foreach (var path in workspace.WorktreePaths.Values)
             {
+                if (rootPath is not null && !Directory.Exists(path))
+                {
+                    continue;
+                }
+
                 var changes = await this._git.GetStatusAsync(path, true);
                 if (changes.Count > 0)
                 {
@@ -196,7 +203,24 @@ public partial class WorkspaceManagerWindow : Window
             }
 
             var paths = string.Join("\n", workspace.WorktreePaths.Values);
-            var message = L10n.T("Удалить все рабочие копии этого комплекта?\n\n{0}\n\nВетки сохранятся. Файлы общей папки вне этих копий сохранятся.", paths);
+            var message = rootPath is null
+                ? L10n.T("Удалить все рабочие копии этого комплекта?\n\n{0}\n\nВетки и основные репозитории сохранятся.", paths)
+                : L10n.T("Удалить комплект вместе с общей папкой?\n\n{0}\n\nБудут удалены все рабочие копии и всё содержимое этой папки. Ветки и основные репозитории сохранятся.", rootPath);
+
+            if (rootPath is not null)
+            {
+                var extraEntries = Directory.EnumerateFileSystemEntries(rootPath)
+                    .Where(path => !workspace.WorktreePaths.Values.Any(copy => GitService.PathsEqual(copy, path)))
+                    .Select(Path.GetFileName)
+                    .Order(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                if (extraEntries.Length > 0)
+                {
+                    message += "\n\n" + L10n.T("Также будут удалены файлы и папки рядом с рабочими копиями:\n{0}", string.Join("\n", extraEntries));
+                }
+            }
+
             if (changedCopies.Count > 0)
             {
                 message += "\n\n" + L10n.T("Есть незакоммиченные изменения:\n{0}\n\nОни будут безвозвратно удалены вместе с рабочими копиями. Продолжить?", string.Join("\n", changedCopies));
@@ -209,7 +233,18 @@ public partial class WorkspaceManagerWindow : Window
                 return;
             }
 
-            var result = await service.RemoveAsync(workspace, this._settings.Workspaces, allowUncommittedChanges: changedCopies.Count > 0);
+            var result = await service.RemoveAsync(workspace, this._settings.Workspaces,
+                allowUncommittedChanges: changedCopies.Count > 0, rootPathToDelete: rootPath);
+            if (rootPath is not null && result.FailedPath is not null && GitService.PathsEqual(result.FailedPath, rootPath))
+            {
+                await this.ReloadAsync();
+                this.StatusText.Text = L10n.T("Общая папка не удалена");
+                MessageBox.Show(this, L10n.T("Рабочие копии удалены, но не удалось удалить общую папку:\n{0}\n\n{1}", rootPath, L10n.T(result.Error ?? string.Empty)),
+                    L10n.T("Удаление остановлено"), MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                return;
+            }
+
             workspace.WorktreePaths = workspace.WorktreePaths.Where(pair => !result.RemovedPaths.Any(path => GitService.PathsEqual(path, pair.Value)))
                 .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
             workspace.RepositoryPaths = workspace.RepositoryPaths.Where(repositoryPath =>

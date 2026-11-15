@@ -219,6 +219,126 @@ internal static class WorkspaceRepositoryRemovalChecks
             removedLast = await service.RemoveRepositoryAsync(cleanWorkspace, lastPreview, false, [cleanWorkspace]);
             check(removedLast && cleanWorkspace.RepositoryPaths.Count == 0 && cleanWorkspace.WorktreePaths.Count == 0,
                 "Удаление последнего репозитория помечает комплект для удаления из настроек");
+
+            var wholeRoot = Path.Combine(root, "whole-root");
+            var wholeRepository = Path.Combine(root, "whole-root-source.git");
+            var wholeWorktree = Path.Combine(wholeRoot, "source");
+            var sibling = Path.Combine(root, "whole-root-sibling");
+            Directory.CreateDirectory(wholeRoot);
+            Directory.CreateDirectory(sibling);
+            await git.RunAsync(root, "clone", "--bare", "--shared", "--", Path.GetFullPath(sourceRepository), wholeRepository);
+            await git.CreateWorktreeAsync(wholeRepository, wholeWorktree, "remove-whole-root-" + Guid.NewGuid().ToString("N"), sourceRef);
+            Directory.CreateDirectory(Path.Combine(wholeRoot, ".artifacts"));
+            File.WriteAllText(Path.Combine(wholeRoot, ".artifacts", "cache.bin"), "cache");
+            var wholeWorkspace = new ProjectWorkspace
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                RepositoryPaths = [wholeRepository],
+                WorktreePaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [wholeRepository] = wholeWorktree
+                }
+            };
+            var parentRootRejected = false;
+            try
+            {
+                await service.ValidateRemovalAsync(wholeWorkspace, [wholeWorkspace], rootPathToDelete: root);
+            }
+            catch (GitException)
+            {
+                parentRootRejected = true;
+            }
+
+            check(parentRootRejected && Directory.Exists(wholeWorktree), "Нельзя удалить родительскую папку общей папки комплекта");
+            var originalInsideRejected = false;
+            var workspaceWithOriginalInside = new ProjectWorkspace
+            {
+                Id = wholeWorkspace.Id,
+                RepositoryPaths = [wholeRepository, Path.Combine(wholeRoot, "original")],
+                WorktreePaths = new Dictionary<string, string>(wholeWorkspace.WorktreePaths, StringComparer.OrdinalIgnoreCase)
+            };
+            try
+            {
+                await service.ValidateRemovalAsync(workspaceWithOriginalInside, [workspaceWithOriginalInside], rootPathToDelete: wholeRoot);
+            }
+            catch (GitException)
+            {
+                originalInsideRejected = true;
+            }
+
+            check(originalInsideRejected && Directory.Exists(wholeWorktree), "Общая папка с путем исходного репозитория блокируется до удаления worktree");
+            var foreignRootRejected = false;
+            var foreignWorkspace = new ProjectWorkspace
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                WorktreePaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [wholeRepository] = Path.Combine(wholeRoot, "foreign")
+                }
+            };
+            try
+            {
+                await service.ValidateRemovalAsync(wholeWorkspace, [wholeWorkspace, foreignWorkspace], rootPathToDelete: wholeRoot);
+            }
+            catch (GitException)
+            {
+                foreignRootRejected = true;
+            }
+
+            check(foreignRootRejected && Directory.Exists(wholeWorktree), "Общая папка, используемая другим комплектом, защищена до удаления worktree");
+            var nestedRepository = Path.Combine(wholeRoot, "nested-repository");
+            Directory.CreateDirectory(nestedRepository);
+            await git.RunAsync(nestedRepository, "init", "--initial-branch=main");
+            var nestedRepositoryRejected = false;
+            try
+            {
+                await service.ValidateRemovalAsync(wholeWorkspace, [wholeWorkspace], rootPathToDelete: wholeRoot);
+            }
+            catch (GitException)
+            {
+                nestedRepositoryRejected = true;
+            }
+
+            check(nestedRepositoryRejected && Directory.Exists(wholeWorktree), "Вложенный Git-репозиторий блокирует удаление общей папки до удаления worktree");
+            Directory.Delete(nestedRepository, true);
+            var nestedWorktreeRepository = Path.Combine(wholeWorktree, "nested-repository");
+            await git.RunAsync(root, "clone", "--", Path.GetFullPath(sourceRepository), nestedWorktreeRepository);
+            nestedRepositoryRejected = false;
+            try
+            {
+                await service.ValidateRemovalAsync(wholeWorkspace, [wholeWorkspace], allowUncommittedChanges: true, rootPathToDelete: wholeRoot);
+            }
+            catch (GitException)
+            {
+                nestedRepositoryRejected = true;
+            }
+
+            check(nestedRepositoryRejected && Directory.Exists(wholeWorktree), "Вложенный в worktree Git-репозиторий защищён от удаления всего комплекта");
+            foreach (var file in Directory.EnumerateFiles(nestedWorktreeRepository, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+            }
+
+            Directory.Delete(nestedWorktreeRepository, true);
+            var cacheFile = Path.Combine(wholeRoot, ".artifacts", "cache.bin");
+            File.SetAttributes(cacheFile, File.GetAttributes(cacheFile) | FileAttributes.ReadOnly);
+            await git.RemoveWorktreeAsync(wholeRepository, wholeWorktree);
+            var missingDefaultRejected = false;
+            try
+            {
+                await service.RemoveAsync(wholeWorkspace, [wholeWorkspace]);
+            }
+            catch (GitException)
+            {
+                missingDefaultRejected = true;
+            }
+
+            check(missingDefaultRejected && Directory.Exists(wholeRoot), "Без полного удаления комплект с потерянной рабочей копией не очищает общую папку");
+            var wholeRootResult = await service.RemoveAsync(wholeWorkspace, [wholeWorkspace], rootPathToDelete: wholeRoot);
+            check(wholeRootResult.FailedPath is null && wholeRootResult.RemovedPaths.Any(path => GitService.PathsEqual(path, wholeWorktree))
+                && !Directory.Exists(wholeRoot)
+                && Directory.Exists(sibling) && Directory.Exists(sourceRepository),
+                "Повторное полное удаление очищает остатки комплекта и сохраняет соседей и исходный репозиторий");
         }
         finally
         {
