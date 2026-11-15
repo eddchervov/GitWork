@@ -87,7 +87,7 @@ public partial class MainWindow
         await this._inlineGitClient.OpenCopyAsync(repository, tree.Path, mode, workspaceContext: true);
     }
 
-    private async Task UpdateGitClientAsync()
+    private async Task UpdateGitClientAsync(bool resetView = false)
     {
         if (this._gitClient is null)
         {
@@ -131,7 +131,7 @@ public partial class MainWindow
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(path => new RepositoryInfo(Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), path, Path.GetFileName(Path.GetDirectoryName(path)) ?? ""))
             .OrderBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase).ToArray();
-        await this._gitClient.SetRepositoriesAsync(registered);
+        await this._gitClient.SetRepositoriesAsync(registered, resetView);
         this.StatusText.Text = L10n.T("Готово");
     }
 
@@ -170,7 +170,7 @@ public partial class MainWindow
 
         this.ApplyMainSection(section);
         this.SaveSettings();
-        await this.ExecuteAsync(() => section == "Worktrees" ? this.ScanAsync() : this.UpdateGitClientAsync(), "Обновление списка…");
+        await this.ExecuteAsync(() => section == "Worktrees" ? this.ScanAsync() : this.UpdateGitClientAsync(resetView: true), "Обновление списка…");
     }
 
     private async Task OpenCopyInClientAsync(RepositoryInfo repository, string path, string mode = "History")

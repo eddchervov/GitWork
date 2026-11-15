@@ -97,6 +97,8 @@ internal static class InlineWorktreeUiChecks
                 {
                     throw new InvalidOperationException("Панель действий не должна сжимать diff во встроенном клиенте.");
                 }
+
+                await InlineWorktreeUiChecks.CheckRepositoryNavigationAsync(window, view, git, repository, linked);
             });
             Console.WriteLine("OK: worktree сразу открывается в Changes, история показывает счётчики 1/1, ручные репозитории не меняются.");
         }
@@ -109,6 +111,90 @@ internal static class InlineWorktreeUiChecks
             }
 
             Directory.Delete(root, true);
+        }
+    }
+
+    private static async Task CheckRepositoryNavigationAsync(Window window, GitClientView worktreeView, GitService git, string repository, string linked)
+    {
+        var repositoriesView = new GitClientView(git, new AppSettings { AutoRefresh = false });
+        window.Content = null;
+        var panel = new Grid();
+        panel.Children.Add(worktreeView);
+        panel.Children.Add(repositoriesView);
+        window.Content = panel;
+        var repositories = new[]
+        {
+            new RepositoryInfo("Main", repository, "lio"),
+            new RepositoryInfo("Linked", linked, "lio")
+        };
+
+        await repositoriesView.SetRepositoriesAsync(repositories);
+        var changesTab = (RadioButton)repositoriesView.FindName("ChangesTab");
+        var worktreeHistory = (RadioButton)worktreeView.FindName("HistoryTab");
+        if (changesTab.IsChecked != true || worktreeHistory.IsChecked != true
+            || ((ContentControl)repositoriesView.FindName("ViewHost")).Content is not ChangesView)
+        {
+            throw new InvalidOperationException("Репозитории должны открывать изменения, сохраняя выбранную историю worktree в том же окне.");
+        }
+
+        ((RadioButton)worktreeView.FindName("ChangesTab")).IsChecked = true;
+        await InlineWorktreeUiChecks.WaitUntilAsync(() => worktreeView.CanLeave);
+        worktreeHistory.IsChecked = true;
+        await InlineWorktreeUiChecks.WaitUntilAsync(() => worktreeView.CanLeave);
+        await repositoriesView.SetRepositoriesAsync(repositories);
+        if (changesTab.IsChecked != true || worktreeHistory.IsChecked != true)
+        {
+            throw new InvalidOperationException("Повторные переключения не должны снимать выбор вкладки другого клиента.");
+        }
+
+        ((RadioButton)repositoriesView.FindName("HistoryTab")).IsChecked = true;
+        await InlineWorktreeUiChecks.WaitUntilAsync(() => repositoriesView.CanLeave);
+        await repositoriesView.SetRepositoriesAsync(repositories, resetView: true);
+        if (changesTab.IsChecked != true || worktreeHistory.IsChecked != true)
+        {
+            throw new InvalidOperationException("При входе в раздел репозиториев должны открываться изменения, даже если ранее выбрана история.");
+        }
+
+        var list = (ListBox)repositoriesView.FindName("RepositoriesList");
+        var groups = System.Windows.Data.CollectionViewSource.GetDefaultView(list.ItemsSource).Groups;
+        if (groups?.Count != 1 || groups[0] is not System.Windows.Data.CollectionViewGroup { Name: "lio", ItemCount: 2 })
+        {
+            throw new InvalidOperationException("Репозитории общей папки должны находиться в одной группе со счётчиком.");
+        }
+
+        window.UpdateLayout();
+        var row = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(repositories[1]);
+        if (row?.ContextMenu is not { } menu)
+        {
+            throw new InvalidOperationException("У строки репозитория должно быть стандартное контекстное меню.");
+        }
+
+        string? removed = null;
+        repositoriesView.RemoveRepositoryRequested += path => removed = path;
+        menu.PlacementTarget = row;
+        menu.IsOpen = true;
+        ((MenuItem)menu.Items[0]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        await InlineWorktreeUiChecks.WaitUntilAsync(() => repositoriesView.CanLeave);
+        menu.IsOpen = false;
+        if (removed != linked || list.Items.Count != 1 || !File.Exists(Path.Combine(linked, ".git")))
+        {
+            throw new InvalidOperationException("Меню должно убирать выбранную строку из списка, сохраняя рабочую копию на диске.");
+        }
+
+        Console.WriteLine("OK: вкладки клиентов независимы, репозитории сгруппированы, контекстное меню убирает запись без удаления файлов.");
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (!condition())
+        {
+            if (DateTime.UtcNow >= deadline)
+            {
+                throw new InvalidOperationException("Клиент не завершил загрузку за отведённое время.");
+            }
+
+            await Task.Delay(25);
         }
     }
 

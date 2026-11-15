@@ -2,8 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
+using System.Windows.Data;
 using GitWork.Core;
 
 namespace GitWork.App;
@@ -15,7 +14,7 @@ public partial class GitClientView : UserControl
     private IReadOnlyList<RepositoryInfo> _repositories = [];
     private RepositoryInfo? _selectedRepository;
     private WorktreeInfo? _selectedCopy;
-    private string _mode = "History";
+    private string _mode = "Changes";
     private bool _updating;
     private bool _loading;
     private int _branchVersion;
@@ -47,7 +46,7 @@ public partial class GitClientView : UserControl
         this.InitializeComponent();
     }
 
-    public async Task SetRepositoriesAsync(IReadOnlyList<RepositoryInfo> repositories)
+    public async Task SetRepositoriesAsync(IReadOnlyList<RepositoryInfo> repositories, bool resetView = false)
     {
         if (!this.CanLeave)
         {
@@ -55,12 +54,20 @@ public partial class GitClientView : UserControl
         }
 
         var previous = this._workspaceContext ? this._settings.SelectedRepository : this._selectedRepository?.Path ?? this._settings.SelectedRepository;
+        this._updating = true;
+        if (resetView || this._workspaceContext)
+        {
+            this._mode = "Changes";
+        }
+
+        this.ChangesTab.IsChecked = this._mode == "Changes";
+        this.HistoryTab.IsChecked = this._mode == "History";
+        this.ComparisonTab.IsChecked = this._mode == "Comparison";
         this.SetWorkspaceContext(false);
         this._repositories = repositories;
-        this._updating = true;
         this.ApplySearch();
         this.RepositoriesList.SelectedItem = this.RepositoriesList.Items.OfType<RepositoryInfo>()
-            .FirstOrDefault(repository => GitService.PathsEqual(repository.Path, previous ?? ""))
+            .FirstOrDefault(repository => !string.IsNullOrWhiteSpace(previous) && GitService.PathsEqual(repository.Path, previous))
             ?? this.RepositoriesList.Items.OfType<RepositoryInfo>().FirstOrDefault();
         this._updating = false;
         await this.SelectRepositoryAsync(this.RepositoriesList.SelectedItem as RepositoryInfo, null);
@@ -87,7 +94,15 @@ public partial class GitClientView : UserControl
 
     private void ApplySearch()
     {
-        this.RepositoriesList.ItemsSource = this._repositories.Where(repository => SearchMatcher.Matches(this.SearchBox.Text, repository.Name, repository.Path)).ToArray();
+        var repositories = this._repositories
+            .Where(repository => SearchMatcher.Matches(this.SearchBox.Text, repository.Name, repository.Path))
+            .OrderBy(repository => repository.Group, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var view = new ListCollectionView(repositories);
+        view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(RepositoryInfo.Group)));
+        this.RepositoriesList.ItemsSource = view;
     }
 
     private async void Search_Changed(object sender, TextChangedEventArgs e)
@@ -366,31 +381,9 @@ public partial class GitClientView : UserControl
         await this.SetRepositoriesAsync(this._repositories.Where(candidate => !GitService.PathsEqual(candidate.Path, repository.Path)).ToArray());
     }
 
-    private void Repository_RightClick(object sender, MouseButtonEventArgs e)
+    private void Repository_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
-        if (!this.CanLeave)
-        {
-            return;
-        }
-
-        var element = e.OriginalSource as DependencyObject;
-        while (element is not null && element is not ListBoxItem)
-        {
-            element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element);
-        }
-
-        if (element is not ListBoxItem item)
-        {
-            return;
-        }
-
-        var menu = new ContextMenu { PlacementTarget = item, StaysOpen = false };
-        var remove = new MenuItem { Header = L10n.T("Убрать из списка") };
-        remove.Click += this.RemoveRepository_Click;
-        menu.Items.Add(remove);
-        menu.Opened += (_, _) => remove.Focus();
-        e.Handled = true;
-        menu.IsOpen = true;
+        e.Handled = !this.CanLeave;
     }
 
     private void AddRepository_Click(object sender, RoutedEventArgs e) => this.AddRepositoryRequested?.Invoke(this, EventArgs.Empty);

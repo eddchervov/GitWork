@@ -11,9 +11,52 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <TextBlock Text="{local:Loc 'РЕПОЗИТОРИИ'}" Style="{StaticResource Caption}" Margin="6,4,0,14" />
         <TextBox x:Name="SearchBox" Grid.Row="1" TextChanged="Search_Changed" ToolTip="{local:Loc 'Поиск по названию и пути'}" AutomationProperties.Name="{local:Loc 'Поиск репозиториев'}" Margin="0,0,0,12" />
-        <ListBox VirtualizingPanel.IsVirtualizing="True" ScrollViewer.CanContentScroll="True" x:Name="RepositoriesList" PreviewMouseRightButtonUp="Repository_RightClick" Grid.Row="2" SelectionChanged="Repository_Changed" AutomationProperties.Name="{local:Loc 'Добавленные репозитории'}">
-          <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}"><Setter Property="Padding" Value="8,6" /><Setter Property="Margin" Value="0,0,0,2" /><Setter Property="ToolTip" Value="{Binding Path}" /></Style></ListBox.ItemContainerStyle>
-          <ListBox.ItemTemplate><DataTemplate><DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding Group}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="10,0,0,0" MaxWidth="100" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /></DockPanel></DataTemplate></ListBox.ItemTemplate>
+        <ListBox VirtualizingPanel.IsVirtualizing="True" ScrollViewer.CanContentScroll="True" x:Name="RepositoriesList" Grid.Row="2" SelectionChanged="Repository_Changed" AutomationProperties.Name="{local:Loc 'Добавленные репозитории'}">
+          <ListBox.ItemContainerStyle>
+            <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+              <Setter Property="Padding" Value="8,6" />
+              <Setter Property="Margin" Value="0,0,0,2" />
+              <Setter Property="ToolTip" Value="{Binding Path}" />
+              <EventSetter Event="ContextMenuOpening" Handler="Repository_ContextMenuOpening" />
+              <Setter Property="ContextMenu">
+                <Setter.Value>
+                  <ContextMenu>
+                    <MenuItem Header="{local:Loc 'Убрать из списка'}">
+                      <MenuItem.Style>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                          <EventSetter Event="Click" Handler="RemoveRepository_Click" />
+                        </Style>
+                      </MenuItem.Style>
+                    </MenuItem>
+                  </ContextMenu>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </ListBox.ItemContainerStyle>
+          <ListBox.GroupStyle>
+            <GroupStyle>
+              <GroupStyle.ContainerStyle>
+                <Style TargetType="GroupItem">
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="GroupItem">
+                        <Expander IsExpanded="True" Margin="0,4,0,8">
+                          <Expander.Header>
+                            <StackPanel Orientation="Horizontal">
+                              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                              <TextBlock Text="{Binding ItemCount, StringFormat=' ({0})'}" Foreground="{DynamicResource MutedBrush}" />
+                            </StackPanel>
+                          </Expander.Header>
+                          <ItemsPresenter Margin="8,4,0,0" />
+                        </Expander>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </GroupStyle.ContainerStyle>
+            </GroupStyle>
+          </ListBox.GroupStyle>
+          <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /></DataTemplate></ListBox.ItemTemplate>
         </ListBox>
         <Button Grid.Row="3" Content="{local:Loc 'Добавить репозиторий…'}" Click="AddRepository_Click" Margin="0,12,0,0" />
       </Grid>
@@ -28,9 +71,9 @@
         </Grid>
       </Border>
       <StackPanel x:Name="ViewTabs" Grid.Row="1" Orientation="Horizontal" Margin="14,8">
-        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ChangesTab" Content="{local:Loc 'Изменения'}" GroupName="GitView" Tag="Changes" Checked="View_Changed" Margin="0,0,18,0" />
-        <RadioButton Style="{StaticResource NavigationTab}" x:Name="HistoryTab" Content="{local:Loc 'История'}" GroupName="GitView" Tag="History" Checked="View_Changed" IsChecked="True" Margin="0,0,18,0" />
-        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ComparisonTab" Content="{local:Loc 'Сравнение'}" GroupName="GitView" Tag="Comparison" Checked="View_Changed" />
+        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ChangesTab" Content="{local:Loc 'Изменения'}" Tag="Changes" Checked="View_Changed" IsChecked="True" Margin="0,0,18,0" />
+        <RadioButton Style="{StaticResource NavigationTab}" x:Name="HistoryTab" Content="{local:Loc 'История'}" Tag="History" Checked="View_Changed" Margin="0,0,18,0" />
+        <RadioButton Style="{StaticResource NavigationTab}" x:Name="ComparisonTab" Content="{local:Loc 'Сравнение'}" Tag="Comparison" Checked="View_Changed" />
       </StackPanel>
       <ContentControl x:Name="ViewHost" Grid.Row="2" />
       <TextBlock x:Name="ErrorText" Grid.Row="3" Foreground="{DynamicResource WarningBrush}" Margin="16,5" TextWrapping="Wrap">
