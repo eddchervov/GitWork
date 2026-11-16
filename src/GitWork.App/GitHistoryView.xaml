@@ -213,7 +213,7 @@
           <Grid Grid.Column="2">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
             <TextBox x:Name="FileTitle" Text="{local:Loc 'Выберите файл'}" Style="{StaticResource SelectableLabel}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Visibility="Collapsed" />
-            <local:DiffView x:Name="CommitDiff" Grid.Row="0" Grid.RowSpan="2" FilePath="{Binding Text, ElementName=FileTitle}" Margin="5,0,0,0" />
+            <local:DiffView x:Name="CommitDiff" Grid.Row="0" Grid.RowSpan="2" Margin="5,0,0,0" />
                 <DockPanel x:Name="CommitFileHeader" Background="{DynamicResource SurfaceBrush}">
                   <Button x:Name="FileHistoryButton" Content="{local:Loc 'История файла'}" DockPanel.Dock="Right" Click="FileHistory_Click" FontSize="11" Padding="6,2" Margin="4,0,0,0" IsEnabled="False" />
                   <TextBox Text="{Binding Text, ElementName=FileTitle}" Style="{StaticResource SelectableLabel}" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,2" />

@@ -119,6 +119,8 @@ public partial class FileHistoryWindow : Window
             var snapshot = await snapshotTask;
             this.SnapshotText.Text = snapshot.Text;
             this.SnapshotNotice.Text = snapshot.Message ?? "";
+            this.CommitDiffViewer.FilePath = entry.RevisionPath;
+            this.WorkingDiffViewer.FilePath = this._currentPath;
             this.CommitDiffViewer.ShowDiff(await commitDiffTask);
             this.WorkingDiffViewer.ShowDiff(await workingDiffTask);
             this.LoadingText.Visibility = Visibility.Collapsed;

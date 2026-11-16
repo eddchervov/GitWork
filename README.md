@@ -7,14 +7,16 @@ A focused Git client. A home for your worktrees.
 
 **English** · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-0.3.2-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.3.3-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
 </div>
 
 Git Work brings everyday Git and multi-repository workspaces into one Windows app. Review changes, follow history, and keep parallel tasks in separate worktrees without losing track of their folders or branches.
 
-The current stable release is **0.3.2**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
+The current stable release is **0.3.3**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
 
 ![Review changes in the dark theme](docs/images/changes-dark.png)
+
+![C# syntax colors in an added file](docs/images/syntax-added.png)
 
 ## Two spaces, one workflow
 
@@ -38,7 +40,8 @@ The Repositories and Worktree tabs keep their selected views independently; Repo
 - Branch comparison with an explicit source and destination.
 - Browse local and remote branches in one searchable list with the current branch pinned. A clean repository switches to a selected local branch; switching is unavailable while it has changes. A remote branch opens the create-branch dialog with its source preselected. Branches checked out in another worktree are unavailable.
 - Compact header controls for Fetch, Pull and Push with incoming and outgoing counts, alongside IDE, terminal and folder actions.
-- A flat interface with compact rows, a wide diff, C# syntax highlighting and addition/deletion counts.
+- A flat interface with compact rows, a wide diff, C# syntax colors for keywords, types, methods, strings and comments, plus addition/deletion counts.
+- Changed fragments stand out inside modified lines in both unified and side-by-side diffs. Code remains selectable and copyable; large replacements keep whole-line highlighting to bound preview work.
 - History above the selected commit's files and diff, with message, author, date, hash and commit search.
 
 ![Explore the commit history](docs/images/history-dark.png)
@@ -101,7 +104,7 @@ dotnet run --project tests/GitWork.UiChecks/GitWork.UiChecks.csproj
 Build the self-contained installer and update feed:
 
 ~~~powershell
-./tools/Build-Release.ps1 -Version 0.3.2
+./tools/Build-Release.ps1 -Version 0.3.3
 ~~~
 
 See [Releasing](docs/RELEASING.md) for the draft-release workflow and the files that must be published together. Building does not publish anything.

@@ -256,6 +256,7 @@ public partial class BranchComparisonView : UserControl
         var version = ++this._selectionVersion;
         this.DiffViewer.Visibility = Visibility.Visible;
         this.FileTitle.Text = file.DisplayPath;
+        this.DiffViewer.FilePath = file.Path;
         this.LoadingText.Visibility = Visibility.Visible;
         this.DiffViewer.ShowDiff(new FileDiff("", "", "", [], false, L10n.T("Чтение файла…")));
 

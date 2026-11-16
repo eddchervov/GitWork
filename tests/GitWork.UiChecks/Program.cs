@@ -25,6 +25,14 @@ internal static class Program
         var isPreview = args.Length == 2 && args[0] is "--preview" or "--compare" or "--graph" or "--graph-dark";
         var application = Program.CreateApplication(isPreview);
 
+        if (args.Contains("--diff-check", StringComparer.Ordinal))
+        {
+            DiffSyntaxChecks.Run();
+            DiffRenderingChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
         if (args.Contains("--preparation-check", StringComparer.Ordinal))
         {
             PreparationUiChecks.Run();
@@ -99,6 +107,8 @@ internal static class Program
         }
 
         Program.CheckDiffView();
+        DiffSyntaxChecks.Run();
+        DiffRenderingChecks.Run();
         UsabilityChecks.Run();
         DailyChecks.Run();
         GraphUiChecks.Run();

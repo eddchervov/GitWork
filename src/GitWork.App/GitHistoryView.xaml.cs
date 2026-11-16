@@ -457,6 +457,7 @@ public partial class GitHistoryView : UserControl
         this.FileHistoryButton.IsEnabled = true;
         this.CommitDiff.ShowDiff(new FileDiff("", "", "", [], false, L10n.T("Чтение изменений коммита…")));
         this.FileTitle.Text = file.DisplayPath;
+        this.CommitDiff.FilePath = file.Path;
         try
         {
             var diff = await this._details.GetDiffAsync(repository.Path, item.Row.Commit.Hash, file);

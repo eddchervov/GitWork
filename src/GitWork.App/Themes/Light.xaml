@@ -19,6 +19,13 @@
   <SolidColorBrush x:Key="SyntaxKeywordBrush" Color="#165DAA" />
   <SolidColorBrush x:Key="SyntaxStringBrush" Color="#8A6415" />
   <SolidColorBrush x:Key="SyntaxCommentBrush" Color="#59734F" />
+  <SolidColorBrush x:Key="SyntaxTypeBrush" Color="#00685F" />
+  <SolidColorBrush x:Key="SyntaxMethodBrush" Color="#61549F" />
+  <SolidColorBrush x:Key="SyntaxNumberBrush" Color="#956414" />
+  <SolidColorBrush x:Key="SyntaxPropertyBrush" Color="#374455" />
+  <SolidColorBrush x:Key="SyntaxDirectiveBrush" Color="#805695" />
+  <SolidColorBrush x:Key="DiffAddedFragmentBrush" Color="#B4DDC2" />
+  <SolidColorBrush x:Key="DiffRemovedFragmentBrush" Color="#EFAFB7" />
   <SolidColorBrush x:Key="DiffRemovedBrush" Color="#FCE2E4" />
   <SolidColorBrush x:Key="DiffAddedBrush" Color="#DCF1E4" />
   <SolidColorBrush x:Key="FileModifiedBrush" Color="#FFFFFF" />

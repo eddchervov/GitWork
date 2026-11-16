@@ -1,8 +1,8 @@
-# Git Work 0.3.2
+# Git Work 0.3.3
 
-- Fix preparation logs losing errors after the first 256 KB of output.
-- Automatically save a full journal to the current user's Git Work log folder, independently of the on-screen output limit.
-- Include attempts, step names, working directories, stdout/stderr, results and exit codes in the journal.
-- Export the full journal instead of the text currently visible in the window; open the automatic log directly.
-- Keep recent output in the window and the bounded step summary, while continuing to record later output and errors.
-- Preserve secret masking and keep the journal available after closing the preparation window.
+- Add C# syntax colors for keywords, types, methods, properties, strings, comments, numbers and directives.
+- Highlight the changed fragments inside modified lines in unified and side-by-side diffs while preserving selectable code text.
+- Keep old and new syntax state separate and reset it across gaps between diff hunks.
+- Pass the selected file path directly to diff viewers in Changes, commit history, file history and branch comparison.
+- Bound per-line comparison work and preserve Unicode text element boundaries when highlighting changes.
+- Keep Git Work's own dark and light theme palettes, with stronger backgrounds only on edited fragments.

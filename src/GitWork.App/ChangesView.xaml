@@ -68,7 +68,7 @@
     </Border>
     <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="Transparent" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
     <Grid Grid.Column="2" x:Name="DiffHeaderHost">
-      <local:DiffView x:Name="DiffViewer" IsUnified="True" FilePath="{Binding Text, ElementName=FileTitle}" />
+      <local:DiffView x:Name="DiffViewer" IsUnified="True" />
           <DockPanel x:Name="FileHeader" VerticalAlignment="Center">
             <Button x:Name="HistoryButton" Content="↗" DockPanel.Dock="Right" Click="History_Click" Padding="5,3" Margin="4,0" ToolTip="{local:Loc 'История файла…'}" AutomationProperties.Name="{local:Loc 'История файла…'}" />
             <TextBlock x:Name="FileContext" Visibility="Collapsed" />

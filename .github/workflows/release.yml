@@ -6,7 +6,7 @@ on:
       version:
         description: Stable version (X.Y.Z)
         required: true
-        default: "0.3.2"
+        default: "0.3.3"
       create_draft:
         description: Create a draft GitHub release after a successful build
         type: boolean

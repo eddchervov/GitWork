@@ -186,6 +186,7 @@ public partial class ChangesView : UserControl
         var version = ++this._selectionVersion;
         this.DiffViewer.Visibility = Visibility.Visible;
         this.FileTitle.Text = entry.File.DisplayPath;
+        this.DiffViewer.FilePath = entry.File.Path;
         this.FileContext.Text = L10n.T(entry.File.StatusDescription);
         this.HistoryButton.IsEnabled = !this._isBusy;
         this.LoadingText.Visibility = Visibility.Visible;

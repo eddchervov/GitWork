@@ -71,6 +71,14 @@ internal static class DesignPreview
                         .Single(entry => entry.File.Path == "src/Lio.Api/RequestLoggingMiddleware.cs");
                     await DesignPreview.WaitUntilAsync(() => ((FrameworkElement)changesView.FindName("LoadingText")).Visibility == Visibility.Collapsed);
                     DesignPreview.Capture(window, Path.Combine(screenshots, "changes.png"));
+                    var diffViewer = (DiffView)changesView.FindName("DiffViewer");
+                    diffViewer.IsUnified = false;
+                    DesignPreview.Capture(window, Path.Combine(screenshots, "changes-split.png"));
+                    diffViewer.IsUnified = true;
+                    changedFiles.SelectedItem = changedFiles.Items.OfType<ChangeFileEntry>()
+                        .Single(entry => entry.File.Path == "tests/Lio.Api.Tests/RequestLoggingMiddlewareTests.cs");
+                    await DesignPreview.WaitUntilAsync(() => ((FrameworkElement)changesView.FindName("LoadingText")).Visibility == Visibility.Collapsed);
+                    DesignPreview.Capture(window, Path.Combine(screenshots, "syntax-added.png"));
 
                     var historyTab = (RadioButton)client.FindName("HistoryTab");
                     historyTab.IsChecked = true;
@@ -226,7 +234,7 @@ internal static class DesignPreview
         await git.RunAsync(path, "add", "README.md");
         await File.WriteAllTextAsync(Path.Combine(path, "src", "Lio.Api", "RequestLoggingMiddleware.cs"), DesignPreview.WorkingMiddleware);
         await File.WriteAllTextAsync(Path.Combine(path, "src", "Lio.Api", "appsettings.Development.json"), "{\n  \"Logging\": {\n    \"LogLevel\": {\n      \"Default\": \"Debug\"\n    }\n  }\n}\n");
-        await File.WriteAllTextAsync(Path.Combine(path, "tests", "Lio.Api.Tests", "RequestLoggingMiddlewareTests.cs"), "namespace Lio.Api.Tests;\n\npublic sealed class RequestLoggingMiddlewareTests\n{\n    public void RequestIdIsIncludedInLogScope() { }\n}\n");
+        await File.WriteAllTextAsync(Path.Combine(path, "tests", "Lio.Api.Tests", "RequestLoggingMiddlewareTests.cs"), DesignPreview.AddedTests);
     }
 
     private static async Task PrepareSmallRepositoryAsync(GitService git, string path, string name)
@@ -413,6 +421,38 @@ internal static class DesignPreview
                     timer.Stop();
                     logger.LogInformation("request_completed {StatusCode} {ElapsedMs}ms {RequestId}", context.Response.StatusCode, timer.ElapsedMilliseconds, requestId);
                 }
+            }
+        }
+        """;
+
+    private const string AddedTests = """
+        using System.Threading.Tasks;
+        using Microsoft.AspNetCore.Http;
+        using Microsoft.Extensions.Logging;
+        using Xunit;
+
+        namespace Lio.Api.Tests;
+
+        public sealed class RequestLoggingMiddlewareTests
+        {
+            [Fact]
+            public async Task RequestIdIsIncludedInLogScope()
+            {
+                // Для каждого запроса в журнале сохраняется идентификатор.
+                var context = new DefaultHttpContext();
+                context.Request.Method = "GET";
+                context.Request.Path = "/api/health";
+                context.TraceIdentifier = "request-42";
+
+                var logger = new TestLogger<RequestLoggingMiddleware>();
+                var middleware = new RequestLoggingMiddleware(
+                    _ => Task.CompletedTask,
+                    logger);
+
+                await middleware.InvokeAsync(context);
+
+                Assert.Equal(200, context.Response.StatusCode);
+                Assert.Contains("request-42", logger.Messages);
             }
         }
         """;

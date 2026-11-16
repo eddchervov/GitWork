@@ -109,6 +109,7 @@ public partial class DiffView : UserControl
             .ToArray();
 
         this._currentChange = -1;
+        this.PrepareHighlighting();
         this.ApplyUnifiedMode();
         this.UpdateChangeControls();
         this.ScrollToCurrentChange();
@@ -268,6 +269,7 @@ public partial class DiffView : UserControl
     {
         if (dependencyObject is DiffView view && view.IsInitialized)
         {
+            view.PrepareHighlighting();
             view.ApplyUnifiedMode();
         }
     }
@@ -391,7 +393,10 @@ public partial class DiffView : UserControl
                 var gutter = new Run($"{line.OldNumber,5} {line.NewNumber,5} {line.Marker,1} ");
                 gutter.SetResourceReference(TextElement.ForegroundProperty, "MutedBrush");
                 paragraph.Inlines.Add(gutter);
-                this.AppendCodeText(paragraph.Inlines, line.Text, this.ShouldHighlight(line.Kind));
+                var oldSide = line.Kind == UnifiedDiffLineKind.Removed;
+                var number = line.Kind is UnifiedDiffLineKind.Hunk or UnifiedDiffLineKind.Notice ? null : oldSide ? line.OldNumber : line.NewNumber;
+                this.AppendCodeText(paragraph.Inlines, line.Text, number, oldSide,
+                    line.Kind is UnifiedDiffLineKind.Removed or UnifiedDiffLineKind.Added);
                 if (line.Kind is UnifiedDiffLineKind.Added or UnifiedDiffLineKind.Removed)
                 {
                     paragraph.SetResourceReference(TextElement.BackgroundProperty, line.Kind == UnifiedDiffLineKind.Added ? "DiffAddedBrush" : "DiffRemovedBrush");
@@ -417,10 +422,10 @@ public partial class DiffView : UserControl
                 var row = new TableRow();
                 var beforeParagraph = new Paragraph { Margin = new Thickness(0) };
                 beforeParagraph.Inlines.Add(new Run($"{line.OldNumber,5}  "));
-                this.AppendCodeText(beforeParagraph.Inlines, line.OldText, this.IsCSharpFile);
+                this.AppendCodeText(beforeParagraph.Inlines, line.OldText, line.OldNumber, true, line.Kind == DiffLineKind.Modified);
                 var afterParagraph = new Paragraph { Margin = new Thickness(0) };
                 afterParagraph.Inlines.Add(new Run($"{line.NewNumber,5}  "));
-                this.AppendCodeText(afterParagraph.Inlines, line.NewText, this.IsCSharpFile);
+                this.AppendCodeText(afterParagraph.Inlines, line.NewText, line.NewNumber, false, line.Kind == DiffLineKind.Modified);
                 var before = new TableCell(beforeParagraph) { Padding = new Thickness(6, 1, 6, 1) };
                 var after = new TableCell(afterParagraph) { Padding = new Thickness(6, 1, 6, 1), BorderBrush = (Brush)this.FindResource("BorderBrush"), BorderThickness = new Thickness(1, 0, 0, 0) };
                 if (line.Kind is DiffLineKind.Removed or DiffLineKind.Modified)

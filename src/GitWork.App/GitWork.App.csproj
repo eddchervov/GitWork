@@ -10,6 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <PackageReference Include="Velopack" Version="1.2.161" />
     <EmbeddedResource Include="Resources\en.json" />
     <ApplicationDefinition Remove="App.xaml" />
