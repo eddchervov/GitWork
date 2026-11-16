@@ -188,7 +188,7 @@ public partial class ChangesView : UserControl
         this.FileTitle.Text = entry.File.DisplayPath;
         this.DiffViewer.FilePath = entry.File.Path;
         this.FileContext.Text = L10n.T(entry.File.StatusDescription);
-        this.HistoryButton.IsEnabled = !this._isBusy;
+        this.HistoryButton.IsEnabled = !this._isBusy && !entry.File.IsDirectory;
         this.LoadingText.Visibility = Visibility.Visible;
         try
         {
@@ -286,7 +286,7 @@ public partial class ChangesView : UserControl
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
     {
-        var entries = this._files.Where(this.IsCurrentRepository).ToArray();
+        var entries = this._files.Where(entry => this.IsCurrentRepository(entry) && entry.CanInclude).ToArray();
         var include = entries.Any(entry => !entry.IsIncluded);
         foreach (var entry in entries)
         {
@@ -327,11 +327,12 @@ public partial class ChangesView : UserControl
     private void UpdateCommitControls()
     {
         var entries = this._files.Where(this.IsCurrentRepository).ToArray();
+        var eligibleCount = entries.Count(entry => entry.CanInclude);
         var count = entries.Count(entry => entry.IsIncluded);
-        this.TitleText.Text = L10n.T("Изменённые файлы · {0}", entries.Length);
-        this.CommitSelectionText.Text = L10n.T("Выбрано {0} из {1}", count, entries.Length);
-        this.SelectAllBox.IsChecked = count == 0 ? false : count == entries.Length ? true : null;
-        this.SelectAllBox.IsEnabled = !this._isBusy && entries.Length > 0;
+        this.TitleText.Text = L10n.T("Изменения · {0}", entries.Length);
+        this.CommitSelectionText.Text = L10n.T("Выбрано {0} из {1}", count, eligibleCount);
+        this.SelectAllBox.IsChecked = count == 0 ? false : count == eligibleCount ? true : null;
+        this.SelectAllBox.IsEnabled = !this._isBusy && eligibleCount > 0;
         this.CommitButton.Content = this._isBusy ? L10n.T("Подождите…") : L10n.T("Создать коммит ({0})", count);
         this.CommitButton.IsEnabled = !this.IsBusy && count > 0 && !string.IsNullOrWhiteSpace(this.CommitTitleBox.Text);
     }
@@ -406,7 +407,7 @@ public partial class ChangesView : UserControl
         this.SearchBox.IsEnabled = !busy;
         this.CommitTitleBox.IsEnabled = !busy;
         this.CommitDescriptionBox.IsEnabled = !busy;
-        this.HistoryButton.IsEnabled = !busy && this.SelectedFile is not null;
+        this.HistoryButton.IsEnabled = !busy && this.SelectedFile is { IsDirectory: false };
         this.UpdateCommitControls();
     }
 
@@ -456,7 +457,7 @@ public sealed class ChangeGroup
 public sealed class ChangeFileEntry : INotifyPropertyChanged
 {
     private bool _isSelected;
-    private bool _isIncluded = true;
+    private bool _isIncluded;
     private ChangeScope? _selectedScope;
 
     public ChangeSource Source { get; }
@@ -471,6 +472,8 @@ public sealed class ChangeFileEntry : INotifyPropertyChanged
 
     public string StatusCode => this.File.StatusCode;
 
+    public bool CanInclude => !this.File.IsDirectory;
+
     public bool HasStaged => this.File.Status.Length > 0 && this.File.Status[0] != ' ' && this.File.Status != "??";
 
     public bool HasWorking => this.File.Status == "??" || (this.File.Status.Length > 1 && this.File.Status[1] != ' ');
@@ -480,7 +483,7 @@ public sealed class ChangeFileEntry : INotifyPropertyChanged
         get => this._isIncluded;
         set
         {
-            if (this._isIncluded == value)
+            if (this._isIncluded == value || value && !this.CanInclude)
             {
                 return;
             }
@@ -534,6 +537,7 @@ public sealed class ChangeFileEntry : INotifyPropertyChanged
     {
         this.Source = source;
         this.File = file;
+        this._isIncluded = this.CanInclude;
     }
 
     public bool IsAvailable(ChangeScope scope) => scope == ChangeScope.WorkingTree ? this.HasWorking : this.HasStaged;

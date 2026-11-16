@@ -237,6 +237,15 @@ public sealed class GitChangeService
             throw new GitException("Путь к файлу выходит за пределы рабочей копии.");
         }
 
+        if (Directory.Exists(path))
+        {
+            var hasRepository = File.Exists(Path.Combine(path, ".git")) || Directory.Exists(Path.Combine(path, ".git"));
+
+            return GitChangeService.EmptyDiff(hasRepository
+                ? "Это вложенный Git-репозиторий или worktree. Откройте его отдельно для просмотра изменений. В коммит родительского репозитория эта папка не включается."
+                : "Это папка. Выберите отдельный файл внутри неё для просмотра и коммита.");
+        }
+
         if (!File.Exists(path))
         {
             return GitChangeService.EmptyDiff("Неотслеживаемый файл был удалён после обновления списка.");
@@ -439,5 +448,5 @@ public sealed class GitChangeService
         ? text
         : text[..MaximumPatchLength] + "\n… Показана часть diff.";
 
-    private static FileDiff EmptyDiff(string message) => new("", "", message, [], false, message);
+    private static FileDiff EmptyDiff(string message) => new("", "", "", [], false, message);
 }

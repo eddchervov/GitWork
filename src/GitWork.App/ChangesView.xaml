@@ -25,7 +25,7 @@
               <DataTemplate>
                 <Grid>
                   <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                  <CheckBox IsChecked="{Binding IsIncluded,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" ToolTip="{local:Loc 'Включить файл целиком в коммит'}" AutomationProperties.Name="{Binding File.DisplayPath}" />
+                  <CheckBox IsChecked="{Binding IsIncluded,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanInclude}" VerticalAlignment="Center" ToolTip="{local:Loc 'Включить файл целиком в коммит'}" AutomationProperties.Name="{Binding File.DisplayPath}" />
                   <ContentControl Grid.Column="1" Content="{Binding File}" ContentTemplate="{StaticResource ChangedFileTemplate}" />
                 </Grid>
               </DataTemplate>

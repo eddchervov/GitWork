@@ -43,7 +43,7 @@ public partial class ChangesView
 
     private void History_Click(object sender, RoutedEventArgs e)
     {
-        if (this.IsBusy || this.SelectedSource is not { } source || this.SelectedFile is not { } file)
+        if (this.IsBusy || this.SelectedSource is not { } source || this.SelectedFile is not { IsDirectory: false } file)
         {
             return;
         }

@@ -75,6 +75,7 @@ public partial class DiffView : UserControl
     private void ShowDiffContent(FileDiff diff)
     {
         this._patch = diff.UnifiedText;
+        this.CopyDiffButton.IsEnabled = diff.UnifiedText.Length > 0;
         this._rawUnifiedHunks = this.BuildUnifiedLines(diff);
         this.InsertUnifiedContext();
         this.UpdateDiffStats();

@@ -684,5 +684,8 @@
   "Git вернул неверный путь к версии файла.": "Git returned an invalid path for the file revision.",
   "Файл слишком большой или бинарный для раскрытия контекста.": "The file is too large or binary to expand context.",
   "Кодировка файла не поддерживается для раскрытия контекста.": "The file encoding is not supported for context expansion.",
-  "В файле слишком много строк для раскрытия контекста.": "The file has too many lines to expand context."
+  "В файле слишком много строк для раскрытия контекста.": "The file has too many lines to expand context.",
+  "Изменения · {0}": "Changes · {0}",
+  "Это вложенный Git-репозиторий или worktree. Откройте его отдельно для просмотра изменений. В коммит родительского репозитория эта папка не включается.": "This is a nested Git repository or worktree. Open it separately to view its changes. This folder is excluded from commits in the parent repository.",
+  "Это папка. Выберите отдельный файл внутри неё для просмотра и коммита.": "This is a folder. Select an individual file inside it to view or commit."
 }

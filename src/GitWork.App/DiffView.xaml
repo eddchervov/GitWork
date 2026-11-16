@@ -10,7 +10,7 @@
       <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
         <TextBlock x:Name="DiffStats" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,8,0"><Run x:Name="AddedLinesText" Foreground="{DynamicResource AddedTextBrush}" /><Run Text="  " /><Run x:Name="RemovedLinesText" Foreground="{DynamicResource DeletedTextBrush}" /></TextBlock>
         <CheckBox x:Name="UnifiedToggle" Content="{local:Loc 'Одна колонка'}" VerticalAlignment="Center" IsChecked="{Binding IsUnified, ElementName=View, Mode=TwoWay}" Margin="0,0,8,0" />
-        <Button Click="CopyDiff_Click" Padding="5,3" Margin="0,0,4,0" ToolTip="{local:Loc 'Копировать diff'}" AutomationProperties.Name="{local:Loc 'Копировать diff'}">
+        <Button x:Name="CopyDiffButton" Click="CopyDiff_Click" Padding="5,3" Margin="0,0,4,0" ToolTip="{local:Loc 'Копировать diff'}" AutomationProperties.Name="{local:Loc 'Копировать diff'}">
           <Canvas Width="14" Height="14"><Rectangle Canvas.Left="1" Canvas.Top="1" Width="8" Height="9" Stroke="{DynamicResource TextBrush}" /><Rectangle Canvas.Left="5" Canvas.Top="5" Width="8" Height="8" Fill="{DynamicResource RaisedBrush}" Stroke="{DynamicResource TextBrush}" /></Canvas>
         </Button>
         <Button x:Name="PreviousButton" Content="↑" Click="PreviousChange_Click" Padding="7,3" ToolTip="{local:Loc 'Предыдущий блок (Shift+F7)'}" />

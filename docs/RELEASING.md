@@ -8,10 +8,10 @@ Git Work distributes Velopack packages through the existing [eddchervov/GitWork]
 2. On Windows, build locally with .NET SDK 10 and Git for Windows:
 
    ```powershell
-   ./tools/Build-Release.ps1 -Version 0.3.5
+   ./tools/Build-Release.ps1 -Version 0.3.6
    ```
 
-3. Review the generated packages and feed files under `artifacts/releases/0.3.5`.
+3. Review the generated packages and feed files under `artifacts/releases/0.3.6`.
 4. Upload every generated file to the matching GitHub release. The stable update feed requires the feed JSON and full package; Setup.exe alone is not enough for in-app updates.
 
 The release includes the generated stable feed files `assets.win-x64-stable.json`, `releases.win-x64-stable.json`, and `RELEASES-win-x64-stable`, plus the `.nupkg` package, Setup, Portable package, and `SHA256SUMS.txt`. Keep the generated filenames intact.
