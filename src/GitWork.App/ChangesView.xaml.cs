@@ -467,10 +467,9 @@ public sealed class ChangeFileEntry : INotifyPropertyChanged
 
     public string FullPath => System.IO.Path.Combine(this.Source.Path, this.File.Path);
 
-    public string FileName => System.IO.Path.GetFileName(this.File.Path);
+    public string FileName => this.File.FileName;
 
-    public string StatusCode => this.File.Status == "??" ? "A"
-        : this.File.Status.Trim() is { Length: > 0 } status ? status[..1] : "M";
+    public string StatusCode => this.File.StatusCode;
 
     public bool HasStaged => this.File.Status.Length > 0 && this.File.Status[0] != ' ' && this.File.Status != "??";
 

@@ -100,6 +100,22 @@ internal static class DesignPreview
                     ((TextBox)window.FindName("ContextStatusText")).Text = "codex/release-1.21.65  |  " + displayPath;
                     DesignPreview.Capture(window, Path.Combine(screenshots, "history.png"));
 
+                    ((RadioButton)client.FindName("ComparisonTab")).IsChecked = true;
+                    await DesignPreview.WaitUntilAsync(() => client.FindName("ViewHost") is ContentControl { Content: BranchComparisonView });
+                    var comparison = (BranchComparisonView)((ContentControl)client.FindName("ViewHost")).Content;
+                    await DesignPreview.WaitUntilAsync(() => comparison.References.Any(reference => reference.Ref == "refs/heads/release/1.20.2")
+                        && ((Button)comparison.FindName("RefreshButton")).IsEnabled);
+                    ((ComboBox)comparison.FindName("BasePicker")).SelectedItem = comparison.References
+                        .Single(reference => reference.Ref == "refs/heads/release/1.20.2");
+                    await DesignPreview.WaitUntilAsync(() => ((ListBox)comparison.FindName("FilesList")).Items.Count > 0
+                        && ((DiffView)comparison.FindName("DiffViewer")).Lines.Count > 0
+                        && ((FrameworkElement)comparison.FindName("LoadingText")).Visibility == Visibility.Collapsed);
+                    ((TextBox)client.FindName("RepositoryLocation")).Text = displayPath;
+                    ((TextBox)window.FindName("ContextStatusText")).Text = "codex/release-1.21.65  |  " + displayPath;
+                    DesignPreview.Capture(window, Path.Combine(screenshots, "comparison.png"));
+                    historyTab.IsChecked = true;
+                    await DesignPreview.WaitForHistoryAsync(client);
+
                     var git = new GitService();
                     await git.RunAsync(repositoryPath, "restore", "--staged", "--worktree", "--", "README.md", "src/Lio.Api/RequestLoggingMiddleware.cs");
                     File.Delete(Path.Combine(repositoryPath, "src", "Lio.Api", "appsettings.Development.json"));

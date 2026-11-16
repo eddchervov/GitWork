@@ -199,14 +199,7 @@
                   <Setter Property="Margin" Value="0" />
                 </Style>
               </ListBox.ItemContainerStyle>
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <DockPanel ToolTip="{Binding DisplayPath}">
-                    <Border DockPanel.Dock="Left" Background="{DynamicResource AccentSurfaceBrush}" Padding="3,0" Margin="0,0,5,0" VerticalAlignment="Top"><TextBlock Text="{Binding StatusCode}" Foreground="{DynamicResource AccentBrush}" FontSize="10" FontWeight="SemiBold" /></Border>
-                    <TextBlock Text="{Binding DisplayPath}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="12" />
-                  </DockPanel>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
+              <ListBox.ItemTemplate><DataTemplate><ContentControl Content="{Binding File}" ContentTemplate="{StaticResource ChangedFileTemplate}" /></DataTemplate></ListBox.ItemTemplate>
             </ListBox>
           </Grid>
           <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource BackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />

@@ -24,13 +24,9 @@
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Grid>
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition Width="24" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition /></Grid.ColumnDefinitions>
                   <CheckBox IsChecked="{Binding IsIncluded,Mode=TwoWay,UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" ToolTip="{local:Loc 'Включить файл целиком в коммит'}" AutomationProperties.Name="{Binding File.DisplayPath}" />
-                  <TextBlock Grid.Column="1" Text="{Binding StatusCode}" FontFamily="Consolas" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                  <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource TextBrush}" FontSize="13" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding File.DisplayPath}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
+                  <ContentControl Grid.Column="1" Content="{Binding File}" ContentTemplate="{StaticResource ChangedFileTemplate}" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>

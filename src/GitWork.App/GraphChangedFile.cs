@@ -6,7 +6,7 @@ public sealed record GraphChangedFile(ChangedFile File)
 {
     public string DisplayPath => this.File.DisplayPath;
 
-    public string StatusCode => this.File.Status.Trim() is { Length: > 0 } status ? status[..1] : "M";
+    public string StatusCode => this.File.StatusCode;
 
     public string StatusLabel => L10n.T(this.StatusCode switch
     {

@@ -315,6 +315,16 @@
           </Setter.Value>
         </Setter>
       </Style>
+      <DataTemplate x:Key="ChangedFileTemplate">
+        <Grid ToolTip="{Binding DisplayPath}">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition /></Grid.ColumnDefinitions>
+          <TextBlock Text="{Binding StatusCode}" Foreground="{Binding Foreground,RelativeSource={RelativeSource AncestorType=ListBoxItem}}" FontFamily="Consolas" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+            <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource TextBrush}" FontSize="13" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding DisplayPath}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,2,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Grid>
+      </DataTemplate>
       <Style x:Key="FileRow" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
         <Setter Property="Padding" Value="6,3" />
         <Setter Property="Margin" Value="0,0,0,1" />

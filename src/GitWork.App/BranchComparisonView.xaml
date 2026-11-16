@@ -32,7 +32,7 @@
     </DockPanel>
     <Grid Grid.Row="3">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="250" MinWidth="180" />
+        <ColumnDefinition Width="320" MinWidth="250" />
         <ColumnDefinition Width="7" />
         <ColumnDefinition Width="*" MinWidth="200" />
       </Grid.ColumnDefinitions>
@@ -60,13 +60,8 @@
           </TextBlock>
         </Grid>
         <Grid Grid.Row="2">
-          <ListBox x:Name="FilesList" SelectionChanged="FilesList_SelectionChanged" AutomationProperties.Name="{local:Loc 'Изменённые между ветками файлы'}" VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.IsVirtualizing="True" ScrollViewer.CanContentScroll="True">
-            <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource FileRow}"><Setter Property="Tag" Value="{Binding StatusDescription}" /></Style></ListBox.ItemContainerStyle>
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding DisplayPath}" TextWrapping="Wrap" />
-              </DataTemplate>
-            </ListBox.ItemTemplate>
+          <ListBox x:Name="FilesList" SelectionChanged="FilesList_SelectionChanged" ItemTemplate="{StaticResource ChangedFileTemplate}" AutomationProperties.Name="{local:Loc 'Изменённые между ветками файлы'}" VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.IsVirtualizing="True" ScrollViewer.CanContentScroll="True">
+            <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource FileRow}"><Setter Property="Tag" Value="{Binding StatusDescription}" /><Setter Property="ToolTip" Value="{Binding DisplayPath}" /></Style></ListBox.ItemContainerStyle>
           </ListBox>
           <TextBlock x:Name="EmptyFilesText" Text="{local:Loc 'Нет изменений файлов'}" Foreground="{DynamicResource MutedBrush}" Margin="12" Visibility="Collapsed" IsHitTestVisible="False" />
         </Grid>
