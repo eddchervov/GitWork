@@ -29,6 +29,10 @@ public sealed class AppSettings
 
     public List<ProjectWorkspace> Workspaces { get; set; } = [];
 
+    public List<PreparationProfile> PreparationProfiles { get; set; } = [];
+
+    public List<PreparationBinding> PreparationBindings { get; set; } = [];
+
     public string? SelectedWorkspaceId { get; set; }
 
     public double SidebarWidth { get; set; } = 310;
@@ -118,6 +122,18 @@ public sealed class AppSettings
             workspace.PrimaryRepositoryPath ??= workspace.RepositoryPaths.FirstOrDefault(path => Path.GetFileName(path) == legacyName)
                 ?? workspace.RepositoryPaths.FirstOrDefault();
         }
+        settings.PreparationProfiles ??= [];
+        settings.PreparationBindings ??= [];
+        settings.PreparationProfiles = settings.PreparationProfiles.Where(profile => profile is not null).ToList();
+        foreach (var profile in settings.PreparationProfiles)
+        {
+            profile.Steps ??= [];
+            profile.Variables ??= [];
+        }
+
+        settings.PreparationBindings = settings.PreparationBindings.Where(binding => binding is not null
+            && binding.Scope is "Repository" or "Group" or "Worktree" && Path.IsPathFullyQualified(binding.Path)
+            && settings.PreparationProfiles.Any(profile => profile.Id == binding.ProfileId)).ToList();
         settings.Projects = settings.Projects.Where(project => project is not null && !string.IsNullOrWhiteSpace(project.Name)).ToList();
 
         foreach (var project in settings.Projects)

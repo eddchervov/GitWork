@@ -20,6 +20,7 @@
       <TextBox x:Name="WorktreeBranchName" Text="feature/" />
       <TextBlock Text="{local:Loc 'Папка'}" Foreground="{DynamicResource MutedBrush}" Margin="0,10,0,5" />
       <TextBox x:Name="WorktreePath" />
+      <local:PreparationSelector x:Name="Preparation" />
     </StackPanel>
     <StackPanel x:Name="CherryFields" Grid.Row="2" Visibility="Collapsed">
       <TextBlock Text="{local:Loc 'Целевая локальная ветка'}" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,5" />

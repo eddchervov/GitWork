@@ -12,13 +12,14 @@ public partial class CreateWorktreeWindow : Window
     private readonly IReadOnlyList<BranchInfo> _branches;
     private string? _suggestedPath;
 
-    public CreateWorktreeWindow(RepositoryInfo repository, IReadOnlyList<BranchInfo> branches, string? currentBranch)
+    public CreateWorktreeWindow(RepositoryInfo repository, IReadOnlyList<BranchInfo> branches, string? currentBranch, AppSettings? settings = null)
     {
         this._repository = repository;
         this._branches = branches;
         this.InitializeComponent();
         this.SourceInitialized += (_, _) => WindowAppearance.ApplyTheme(this);
         this.RepositoryLabel.Text = repository.Path;
+        this.Preparation.Configure(settings ?? new AppSettings(), repository.Path);
         this.BasePicker.ItemsSource = branches.Select(branch => branch with { OccupiedPath = null }).ToArray();
         this.BasePicker.SelectedItem = this.BasePicker.Items.OfType<BranchInfo>().FirstOrDefault(branch => branch.Name == currentBranch)
             ?? this.BasePicker.Items.OfType<BranchInfo>().FirstOrDefault();
@@ -28,6 +29,8 @@ public partial class CreateWorktreeWindow : Window
     }
 
     public string TargetPath => Path.GetFullPath(this.TargetPathBox.Text.Trim());
+
+    public PreparationProfile? PreparationProfile => this.Preparation.ProfileToRun;
 
     public string BranchName => this.ModePicker.SelectedIndex == 0
         ? this.BranchNameBox.Text.Trim()
@@ -126,6 +129,9 @@ public partial class CreateWorktreeWindow : Window
             return;
         }
 
-        this.DialogResult = true;
+        if (this.Preparation.RememberSelection())
+        {
+            this.DialogResult = true;
+        }
     }
 }

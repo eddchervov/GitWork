@@ -1,0 +1,7 @@
+<Window x:Class="GitWork.App.PreparationLaunchWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'Запустить подготовку'}" Width="640" SizeToContent="Height" WindowStartupLocation="CenterOwner" Style="{StaticResource {x:Type Window}}">
+  <StackPanel Margin="20">
+    <TextBox x:Name="TargetText" Style="{StaticResource SelectableText}" Foreground="{DynamicResource MutedBrush}" />
+    <local:PreparationSelector x:Name="Preparation" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0"><Button Content="{local:Loc 'Отмена'}" IsCancel="True" Margin="0,0,8,0" /><Button Content="{local:Loc 'Запустить'}" Click="Run_Click" Style="{StaticResource PrimaryButton}" /></StackPanel>
+  </StackPanel>
+</Window>

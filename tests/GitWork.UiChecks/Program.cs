@@ -25,6 +25,20 @@ internal static class Program
         var isPreview = args.Length == 2 && args[0] is "--preview" or "--compare" or "--graph" or "--graph-dark";
         var application = Program.CreateApplication(isPreview);
 
+        if (args.Contains("--preparation-check", StringComparer.Ordinal))
+        {
+            PreparationUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Length == 2 && args[0] == "--preparation-preview")
+        {
+            PreparationUiChecks.RunPreview(application, args[1]);
+            application.Shutdown();
+            return;
+        }
+
         if (args.Contains("--repository-check", StringComparer.Ordinal))
         {
             RepositoryClientUiChecks.Run();
@@ -95,6 +109,7 @@ internal static class Program
         BundleActionsUiChecks.Run();
         LocalizationUiChecks.Run();
         UpdateServiceChecks.Run();
+        PreparationUiChecks.Run();
 
         var window = new MainWindow();
         var root = (Grid)window.Content;

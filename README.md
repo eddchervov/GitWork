@@ -7,12 +7,12 @@ A focused Git client. A home for your worktrees.
 
 **English** · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-0.3.0-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.3.1-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
 </div>
 
 Git Work brings everyday Git and multi-repository workspaces into one Windows app. Review changes, follow history, and keep parallel tasks in separate worktrees without losing track of their folders or branches.
 
-The current stable release is **0.3.0**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
+The current stable release is **0.3.1**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
 
 ![Review changes in the dark theme](docs/images/changes-dark.png)
 
@@ -51,6 +51,24 @@ A bundle groups worktrees for one task. Create one from **File → Create worksp
 
 Removing a registered repository from the Repositories list only removes its entry; its folder stays on disk. When removing one worktree from a bundle, choose whether to remove only the bundle entry, preserving the folder and Git worktree registration, or delete the working copy from disk. Deleting the whole bundle removes its root folder and leftovers such as `.artifacts` after all worktrees are deregistered. Git Work warns and asks for confirmation if tracked or untracked files have uncommitted changes; ignored build files such as `bin` and `obj` do not block deletion. Main and bare repositories, and locked, foreign or nested repositories are protected. If root cleanup fails, the workspace stays listed so you can retry.
 
+## Prepare a new worktree
+
+Save command profiles once in **File → Preparation profiles…**, then select a profile when creating a worktree or bundle, including worktrees created from a commit. A profile can be the default for a repository or its parent-folder group. Clearing **Run commands** skips preparation for that creation without changing the default.
+
+Each step has a name, CMD or PowerShell command, a working directory relative to the new folder, and a stop-on-error option. Bundle preparation starts only after all worktrees have been created and saved. For example, run these as three separate CMD steps from the bundle root:
+
+```cmd
+Online\Files\Cmds\build.cmd debug
+Online\Files\Cmds\link-resources.cmd
+Online\Files\Configs\install.cmd "Online\Files\Configs\development.7z" debug other "tm.land-%COMPUTERNAME%" "%CONFIG_PASSWORD%"
+```
+
+Set `CONFIG_PASSWORD` as a secret profile variable. Secrets are encrypted for the current Windows user and passed as environment variables: `%NAME%` in CMD or `$env:NAME` in PowerShell. Existing Windows environment variables are inherited. Working directories must stay inside the new worktree or bundle. Commands run without an interactive console; use non-interactive scripts.
+
+The preparation window shows step results and a selectable, exportable log. Secret values are masked; lines longer than 8192 characters are hidden. A failed or stopped preparation keeps the created worktrees. Retry resumes from the failed step and skips steps that already succeeded. Run preparation again from a worktree's **⋯** menu, bundle settings, or **File → Run preparation…**.
+
+![Edit a saved preparation profile](docs/images/preparation-profile.png)
+
 ## Install
 
 1. Install [Git for Windows](https://git-scm.com/downloads/win), available on PATH.
@@ -83,7 +101,7 @@ dotnet run --project tests/GitWork.UiChecks/GitWork.UiChecks.csproj
 Build the self-contained installer and update feed:
 
 ~~~powershell
-./tools/Build-Release.ps1 -Version 0.3.0
+./tools/Build-Release.ps1 -Version 0.3.1
 ~~~
 
 See [Releasing](docs/RELEASING.md) for the draft-release workflow and the files that must be published together. Building does not publish anything.

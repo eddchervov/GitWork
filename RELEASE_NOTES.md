@@ -1,10 +1,10 @@
-# Git Work 0.3.0
+# Git Work 0.3.1
 
-- Replace rounded, oversized panels with a compact flat interface and restrained dark and light themes.
-- Keep the repository, branch selector and Fetch/Pull/Push actions in a compact header; retain IDE, terminal and folder shortcuts.
-- Show change counts only for repositories with uncommitted files, without clean-state badges.
-- Use a tall searchable branch panel anchored on the left, with the current branch pinned and local and remote branches in one list.
-- Put the commit graph and message/author/date/hash table above the selected commit's files and diff.
-- Search commits while preserving the query across refreshes; clearing a query restores the selected commit.
-- Add C# syntax highlighting and addition/deletion counts while preserving selectable diff text.
-- Validate the actual Push destination immediately before sending and reject changed or multiple push destinations; use normal non-forced pushes.
+- Save reusable CMD and PowerShell preparation profiles with ordered steps, environment variables and working directories.
+- Select a profile when creating a worktree or bundle, including worktrees created from commits.
+- Remember defaults per repository or parent-folder group. Skip preparation for one creation without changing the saved default.
+- Start bundle preparation only after all worktrees have been created and saved; keep working copies if a command fails or is stopped.
+- Show live step results and a selectable, exportable log. Retry failed preparation while preserving successful steps.
+- Run preparation again from worktree actions, bundle settings or the File menu.
+- Encrypt secret variables for the current Windows user, pass them through the environment and mask them in logs. Hide oversized output lines rather than exposing fragments of a secret.
+- Keep step working directories within the new folder and preserve shell exit codes for error handling.

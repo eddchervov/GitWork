@@ -491,6 +491,9 @@ public partial class MainWindow : Window
             return;
         }
 
+        string? preparationRoot = null;
+        PreparationProfile? preparationProfile = null;
+        string? preparationRepository = null;
         await this.ExecuteAsync(async () =>
         {
             var choices = new List<ProjectWorktreeChoice>();
@@ -504,7 +507,7 @@ public partial class MainWindow : Window
             }
 
             var composition = new ProjectGroup { Name = picker.PrimaryRepository.Name, RepositoryPaths = picker.SelectedRepositories.Select(repository => repository.Path).ToList() };
-            var dialog = new CreateProjectWorkspaceWindow(composition, choices) { Owner = this };
+            var dialog = new CreateProjectWorkspaceWindow(composition, choices, this._settings, picker.PrimaryRepository.Path) { Owner = this };
 
             if (dialog.ShowDialog() != true)
             {
@@ -539,6 +542,13 @@ public partial class MainWindow : Window
                 this.NavigationModePicker.SelectedValue = "All";
                 this.SaveSettings();
                 await this.ScanAsync();
+                if (result.Failed is null)
+                {
+                    preparationRoot = workspace.RootPath;
+                    preparationRepository = picker.PrimaryRepository.Path;
+                    preparationProfile = dialog.PreparationProfile;
+                    dialog.Preparation.RememberSelection(preparationRoot);
+                }
             }
 
             if (result.Failed is not null)
@@ -546,6 +556,11 @@ public partial class MainWindow : Window
                 MessageBox.Show(this, $"Создано копий: {result.Completed.Count}.\nОшибка на шаге {result.Failed.TargetPath}:\n{result.Error}\n\nСозданные копии сохранены в комплекте.", "Комплект создан не полностью", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }, L10n.T("Создание комплекта…"));
+        if (preparationRoot is not null && preparationRepository is not null
+            && PreparationLauncher.Show(this, this._settings, preparationRepository, preparationRoot, bundle: true, profile: preparationProfile))
+        {
+            await this.ExecuteAsync(this.ScanAsync, L10n.T("Обновление рабочих копий…"));
+        }
     }
 
     private async Task LoadWorktreeAsync(WorktreeInfo tree)
@@ -798,21 +813,28 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dialog = new CreateWorktreeWindow(repository, branches, this._worktree?.Branch) { Owner = this };
+        var dialog = new CreateWorktreeWindow(repository, branches, this._worktree?.Branch, this._settings) { Owner = this };
 
         if (dialog.ShowDialog() != true)
         {
             return;
         }
 
+        var created = false;
         await this.ExecuteAsync(async () =>
         {
             await this._git.CreateWorktreeAsync(repository.Path, dialog.TargetPath, dialog.BranchName, dialog.StartPoint);
+            created = true;
+            dialog.Preparation.RememberSelection(dialog.TargetPath);
             this._settings.SelectedNavigationKey = "worktree:loose:" + Path.GetFullPath(dialog.TargetPath);
             this.RepositorySearch.Text = "";
             this.NavigationModePicker.SelectedValue = "All";
             await this.ScanAsync();
         }, L10n.T("Создание worktree…"));
+        if (created && PreparationLauncher.Show(this, this._settings, repository.Path, dialog.TargetPath, profile: dialog.PreparationProfile))
+        {
+            await this.ExecuteAsync(this.ScanAsync, L10n.T("Обновление рабочих копий…"));
+        }
     }
 
     private async void RemoveWorktree_Click(object sender, RoutedEventArgs e)

@@ -227,7 +227,7 @@ public partial class GitClientView : UserControl
         }
         else
         {
-            var history = new GitHistoryView([new GraphRepositoryChoice(repository.Name, tree.Path)], this._git);
+            var history = new GitHistoryView([new GraphRepositoryChoice(repository.Name, tree.Path)], this._git, this._settings);
             history.RepositoryStateChanged += async (_, _) =>
             {
                 if (this.ViewHost.Content == history)

@@ -22,6 +22,8 @@ public partial class CommitOperationWindow : Window
     private readonly IReadOnlyList<WorktreeInfo> _worktrees;
     private readonly string? _startingBranch;
     private readonly string _startingHead;
+    private readonly AppSettings _settings;
+    private readonly string _preparationRepository;
     private bool _isBusy;
 
     public CommitOperationWindow(
@@ -33,7 +35,8 @@ public partial class CommitOperationWindow : Window
         IReadOnlyList<BranchInfo> branches,
         IReadOnlyList<WorktreeInfo> worktrees,
         string? startingBranch,
-        string startingHead)
+        string startingHead,
+        AppSettings? settings = null)
     {
         this.InitializeComponent();
         this._kind = kind;
@@ -44,6 +47,9 @@ public partial class CommitOperationWindow : Window
         this._worktrees = worktrees;
         this._startingBranch = startingBranch;
         this._startingHead = startingHead;
+        this._settings = settings ?? AppSettings.Load();
+        this._preparationRepository = worktrees.FirstOrDefault(tree => tree.IsMain)?.Path ?? repository;
+        this.Preparation.Configure(this._settings, this._preparationRepository);
         this.TitleText.Text = kind switch
         {
             CommitOperationKind.Branch => L10n.T("Создать ветку от коммита"),
@@ -67,6 +73,13 @@ public partial class CommitOperationWindow : Window
     }
 
     public GitCommitOperationResult? Result { get; private set; }
+
+    public PreparationProfile? PreparationProfile => this.Preparation.ProfileToRun;
+
+    public string? CreatedWorktreePath => this._kind == CommitOperationKind.Worktree && this.Result is not null
+        ? Path.GetFullPath(this.WorktreePath.Text.Trim()) : null;
+
+    public string PreparationRepository => this._preparationRepository;
 
     private void TargetBranch_Changed(object sender, SelectionChangedEventArgs e) => this.UpdateTargetBranch();
 
@@ -153,8 +166,14 @@ public partial class CommitOperationWindow : Window
                     throw new GitException(current.BlockReason ?? "Создание worktree сейчас недоступно.");
                 }
 
+                if (!this.Preparation.RememberSelection())
+                {
+                    return;
+                }
+
                 this.Result = await this._operations.CreateWorktreeFromCommitAsync(this._repository, current.CommitHash,
                     this.WorktreeBranchName.Text.Trim(), this.WorktreePath.Text.Trim());
+                this.Preparation.RememberSelection(this.CreatedWorktreePath);
             }
             else
             {

@@ -118,6 +118,7 @@
             <Button Content="IDE" Tag="ide" Click="Launch_Click" Padding="8,3" Margin="0,0,6,0" />
             <Button Content="{local:Loc 'Терминал'}" Tag="terminal" Click="Launch_Click" Padding="8,3" Margin="0,0,6,0" />
             <Button Content="{local:Loc 'Папка'}" Tag="folder" Click="Launch_Click" Padding="8,3" />
+            <Button Content="⋯" Click="MoreActions_Click" Padding="8,3" Margin="6,0,0,0" AutomationProperties.Name="{local:Loc 'Другие действия'}"><Button.ContextMenu><ContextMenu><MenuItem x:Name="PrepareMenuItem" Header="{local:Loc 'Запустить подготовку…'}" Click="Preparation_Click" /></ContextMenu></Button.ContextMenu></Button>
             <ContentControl x:Name="ViewActionsHost" Visibility="Collapsed" Width="0" />
           </WrapPanel>
         </Grid>

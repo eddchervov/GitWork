@@ -13,19 +13,24 @@ public partial class CreateProjectWorkspaceWindow : Window
     private readonly string _projectName;
     private string? _suggestedPath;
 
-    public CreateProjectWorkspaceWindow(ProjectGroup project, IReadOnlyList<ProjectWorktreeChoice> choices)
+    public CreateProjectWorkspaceWindow(ProjectGroup project, IReadOnlyList<ProjectWorktreeChoice> choices, AppSettings? settings = null,
+        string? primaryRepositoryPath = null)
     {
         this._choices = choices;
-        this._parentFolder = Path.Combine(Path.GetDirectoryName(choices[0].Repository.Path)!, "workspaces");
+        var primaryPath = primaryRepositoryPath ?? choices[0].Repository.Path;
+        this._parentFolder = Path.Combine(Path.GetDirectoryName(primaryPath)!, "workspaces");
         this._projectName = CreateProjectWorkspaceWindow.GetFolderName(project.Name);
         this.InitializeComponent();
         this.SourceInitialized += (_, _) => WindowAppearance.ApplyTheme(this);
         this.ProjectLabel.Text = L10n.T("{0} · repositories: {1}", project.Name, choices.Count);
         this.RepositoriesList.ItemsSource = choices;
+        this.Preparation.Configure(settings ?? new AppSettings(), primaryPath, bundle: true);
         this.UpdateSuggestedPath();
     }
 
     public string WorkspaceName => this.WorkspaceNameBox.Text.Trim();
+
+    public PreparationProfile? PreparationProfile => this.Preparation.ProfileToRun;
 
     private static string GetFolderName(string value) => new(value.Select(character =>
         Path.GetInvalidFileNameChars().Contains(character) || char.IsWhiteSpace(character) ? '-' : character).ToArray());
@@ -85,6 +90,9 @@ public partial class CreateProjectWorkspaceWindow : Window
             return;
         }
 
-        this.DialogResult = true;
+        if (this.Preparation.RememberSelection())
+        {
+            this.DialogResult = true;
+        }
     }
 }

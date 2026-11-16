@@ -1,0 +1,17 @@
+<Window x:Class="GitWork.App.PreparationVariableWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:GitWork.App" Title="{local:Loc 'Переменная окружения · Git Work'}" Width="500" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Style="{StaticResource {x:Type Window}}">
+  <StackPanel Margin="18">
+    <TextBlock x:Name="DialogTitle" Text="{local:Loc 'Переменная окружения'}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12" />
+    <TextBlock Text="{local:Loc 'Имя переменной'}" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+    <TextBox x:Name="NameBox" MaxLength="128" />
+    <CheckBox x:Name="SecretBox" Content="{local:Loc 'Секретное значение (шифруется для текущего пользователя Windows)'}" Margin="0,12,0,8" Checked="Secret_Changed" Unchecked="Secret_Changed" />
+    <TextBlock Text="{local:Loc 'Значение'}" Style="{StaticResource Caption}" Margin="0,0,0,4" />
+    <TextBox x:Name="ValueBox" Visibility="Collapsed" />
+    <PasswordBox x:Name="SecretValueBox" Visibility="Collapsed" />
+    <TextBlock Text="{local:Loc 'В CMD: %ИМЯ%. В PowerShell: $env:ИМЯ.'}" Style="{StaticResource Caption}" Margin="0,7,0,0" />
+    <TextBlock x:Name="ValidationText" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+      <Button Content="{local:Loc 'Отмена'}" IsCancel="True" Margin="0,0,8,0" />
+      <Button Content="{local:Loc 'Сохранить'}" Style="{StaticResource PrimaryButton}" Click="Save_Click" IsDefault="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>

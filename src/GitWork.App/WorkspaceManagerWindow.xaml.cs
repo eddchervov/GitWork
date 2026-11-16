@@ -33,6 +33,20 @@ public partial class WorkspaceManagerWindow : Window
         await this.ExecuteAsync(this.ReloadAsync, "Чтение комплектов…");
     }
 
+    private async void Preparation_Click(object sender, RoutedEventArgs e)
+    {
+        if (this._isBusy || this._selected?.RootPath is not { } root
+            || (this._selected.PrimaryRepositoryPath ?? this._selected.RepositoryPaths.FirstOrDefault()) is not { } repository)
+        {
+            return;
+        }
+
+        if (PreparationLauncher.Show(this, this._settings, repository, root, bundle: true, choose: true))
+        {
+            await this.ExecuteAsync(this.ReloadAsync, "Чтение комплектов…");
+        }
+    }
+
     private async Task ExecuteAsync(Func<Task> action, string status)
     {
         if (this._isBusy)

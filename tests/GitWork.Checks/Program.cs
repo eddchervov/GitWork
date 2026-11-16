@@ -14,6 +14,12 @@ void Check(bool condition, string name)
     Console.WriteLine($"OK: {name}");
 }
 
+if (args.Contains("--preparation-only", StringComparer.Ordinal))
+{
+    await PreparationChecks.RunAsync(Check);
+    return;
+}
+
 var trees = GitOutputParser.ParseWorktrees(
     "worktree C:/Проекты/Основная\0HEAD abc\0branch refs/heads/develop\0\0"
     + "worktree C:/Проекты/С пробелом\0HEAD def\0detached\0locked проверка\0\0"
@@ -467,5 +473,6 @@ await CloneChecks.RunAsync(Check);
 await SelectedCommitChecks.RunAsync(Check);
 await BranchComparisonChecks.RunAsync(Check);
 await WorkspaceRepositoryRemovalChecks.RunAsync(Check);
+await PreparationChecks.RunAsync(Check);
 
 Console.WriteLine($"Успешно: {checks} проверок.");

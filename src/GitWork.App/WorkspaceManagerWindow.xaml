@@ -31,6 +31,7 @@
         <WrapPanel Grid.Row="1" Margin="0,18,0,0">
           <Button Content="{local:Loc 'Переименовать'}" Click="Rename_Click" Margin="0,0,8,8" />
           <Button Content="{local:Loc '↻ Обновить'}" Click="Refresh_Click" Margin="0,0,8,8" />
+          <Button Content="{local:Loc 'Запустить подготовку…'}" Click="Preparation_Click" Margin="0,0,8,8" />
           <Button Content="{local:Loc 'Удалить комплект…'}" Click="Remove_Click" Foreground="{DynamicResource WarningBrush}" Background="Transparent" Margin="0,0,0,8" />
         </WrapPanel>
         <TextBlock Grid.Row="2" x:Name="SummaryLabel" Margin="0,5,0,16" Foreground="{DynamicResource AccentBrush}" />

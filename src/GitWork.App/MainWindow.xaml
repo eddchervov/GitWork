@@ -14,6 +14,8 @@
         <MenuItem Header="{local:Loc 'Добавить репозиторий…'}" Click="AddRepository_Click" />
         <MenuItem Header="{local:Loc 'Папки поиска worktree…'}" Click="ChangeRoot_Click" />
         <MenuItem Header="{local:Loc 'Инструменты…'}" Click="Tools_Click" />
+        <MenuItem Header="{local:Loc 'Профили подготовки…'}" Click="PreparationProfiles_Click" />
+        <MenuItem Header="{local:Loc 'Запустить подготовку…'}" Click="RunPreparation_Click" />
         <MenuItem Header="{local:Loc 'Язык / Language'}">
           <MenuItem x:Name="RussianLanguageItem" Header="{local:Loc 'Русский'}" Tag="ru" IsCheckable="True" IsChecked="True" Click="Language_Click" />
           <MenuItem x:Name="EnglishLanguageItem" Header="English" Tag="en" IsCheckable="True" Click="Language_Click" />

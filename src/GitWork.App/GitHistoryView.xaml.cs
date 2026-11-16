@@ -12,6 +12,7 @@ public partial class GitHistoryView : UserControl
     private readonly GitCommitDetailsService _details;
     private readonly GitService _git;
     private readonly GitCommitOperationService _operations;
+    private readonly AppSettings _preparationSettings;
     private RemoteRepositoryState? _remoteState;
     private bool _isBusy;
     private bool _isInitializing = true;
@@ -25,7 +26,7 @@ public partial class GitHistoryView : UserControl
     private int _loadVersion;
     private GitCommitOperationResult? _cherryState;
 
-    public GitHistoryView(IReadOnlyList<GraphRepositoryChoice> repositories, GitService git)
+    public GitHistoryView(IReadOnlyList<GraphRepositoryChoice> repositories, GitService git, AppSettings? settings = null)
     {
         this.InitializeComponent();
         ((Grid)this.CommitFileHeader.Parent).Children.Remove(this.CommitFileHeader);
@@ -35,6 +36,7 @@ public partial class GitHistoryView : UserControl
         this._details = new GitCommitDetailsService(git);
         this._git = git;
         this._operations = new GitCommitOperationService(git);
+        this._preparationSettings = settings ?? AppSettings.Load();
         this.CommitDiff.IsUnified = true;
         this.GraphModePicker.ItemsSource = new[] { new GraphModeOption(false, L10n.T("Компактно")), new GraphModeOption(true, L10n.T("Все ветки")) };
         this.GraphModePicker.SelectedIndex = 0;

@@ -85,12 +85,18 @@ public partial class GitHistoryView
             }
 
             var dialog = new CommitOperationWindow(kind, repository.Path, this._git, this._operations, preview,
-                branches, worktrees, branch, head)
+                branches, worktrees, branch, head, this._preparationSettings)
             {
                 Owner = Window.GetWindow(this)
             };
             this.SetBusy(false);
             dialog.ShowDialog();
+            if (dialog.CreatedWorktreePath is { } createdPath)
+            {
+                PreparationLauncher.Show(Window.GetWindow(this), this._preparationSettings, dialog.PreparationRepository, createdPath,
+                    profile: dialog.PreparationProfile);
+            }
+
             this.SetBusy(true);
             this._cherryState = dialog.Result;
             await this.LoadAsync(repository);
