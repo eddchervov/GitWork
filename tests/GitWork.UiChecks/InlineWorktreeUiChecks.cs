@@ -103,11 +103,13 @@ internal static class InlineWorktreeUiChecks
                 }
 
                 var contentWidth = host.ActualWidth;
-                ((Button)view.FindName("ActionsButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                ((Button)view.FindName("BranchSelectorButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                await InlineWorktreeUiChecks.WaitUntilAsync(() => view.CanLeave);
                 view.UpdateLayout();
-                if (((FrameworkElement)view.FindName("ActionsPanel")).Visibility != Visibility.Visible || host.ActualWidth < contentWidth)
+                if (((FrameworkElement)view.FindName("BranchPickerHost")).Visibility != Visibility.Visible
+                    || host.ActualWidth < contentWidth || view.FindName("ActionsPanel") is not null)
                 {
-                    throw new InvalidOperationException("Панель действий не должна сжимать diff во встроенном клиенте.");
+                    throw new InvalidOperationException("Панель веток должна открываться поверх содержимого, сохраняя ширину diff и не создавая боковую панель действий.");
                 }
 
                 await InlineWorktreeUiChecks.CheckRepositoryNavigationAsync(window, view, git, repository, linked);

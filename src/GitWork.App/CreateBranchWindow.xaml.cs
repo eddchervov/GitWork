@@ -8,7 +8,7 @@ public partial class CreateBranchWindow : Window
 {
     private readonly IReadOnlyList<BranchInfo> _branches;
 
-    public CreateBranchWindow(string worktree, IReadOnlyList<BranchInfo> branches, string? currentBranch)
+    public CreateBranchWindow(string worktree, IReadOnlyList<BranchInfo> branches, string? currentBranch, string? sourceRef = null)
     {
         this._branches = branches;
         this.InitializeComponent();
@@ -20,7 +20,7 @@ public partial class CreateBranchWindow : Window
             branch.FullName,
             L10n.T("{0} · {1}", branch.Name, L10n.T(branch.IsRemote ? "удалённая" : "локальная")))));
         this.StartPointPicker.ItemsSource = startPoints;
-        this.StartPointPicker.SelectedItem = startPoints.FirstOrDefault(point => point.Ref == "refs/heads/" + currentBranch)
+        this.StartPointPicker.SelectedItem = startPoints.FirstOrDefault(point => point.Ref == (sourceRef ?? "refs/heads/" + currentBranch))
             ?? startPoints[0];
     }
 

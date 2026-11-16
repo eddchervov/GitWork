@@ -44,6 +44,8 @@ public partial class GitClientView : UserControl
         this._git = git;
         this._settings = settings;
         this.InitializeComponent();
+        this.InitializeRepositoryStatuses();
+        this.InitializeBranchPicker();
     }
 
     public async Task SetRepositoriesAsync(IReadOnlyList<RepositoryInfo> repositories, bool resetView = false)
@@ -54,6 +56,7 @@ public partial class GitClientView : UserControl
         }
 
         var previous = this._workspaceContext ? this._settings.SelectedRepository : this._selectedRepository?.Path ?? this._settings.SelectedRepository;
+        this._repositoryStatusVersion++;
         this._updating = true;
         if (resetView || this._workspaceContext)
         {
@@ -71,6 +74,7 @@ public partial class GitClientView : UserControl
             ?? this.RepositoriesList.Items.OfType<RepositoryInfo>().FirstOrDefault();
         this._updating = false;
         await this.SelectRepositoryAsync(this.RepositoriesList.SelectedItem as RepositoryInfo, null);
+        _ = this.RefreshRepositoryStatusesAsync();
     }
 
     public async Task OpenCopyAsync(RepositoryInfo repository, string path, string mode = "History", bool workspaceContext = true)
@@ -151,8 +155,9 @@ public partial class GitClientView : UserControl
             this._selectedRepository = repository;
             this._selectedCopy = null;
             this.CurrentBranchLabel.Text = "";
-            this.BranchesPicker.ItemsSource = null;
-            this.ActionsButton.IsEnabled = false;
+            this._branches = [];
+            this.BranchSelectorButton.IsEnabled = false;
+            this.HeaderActions.IsEnabled = false;
             this.DetachView();
             this.ViewTabs.Visibility = Visibility.Collapsed;
             this.RepositoryName.Text = repository?.Name ?? L10n.T(this._repositories.Count == 0 ? "Добавьте репозиторий" : "Ничего не найдено");
@@ -197,7 +202,6 @@ public partial class GitClientView : UserControl
 
     private async Task ShowCurrentViewAsync()
     {
-        this.ActionsButton.IsEnabled = true;
         this.HistoryTab.IsEnabled = true;
         this.ComparisonTab.IsEnabled = true;
         this.DetachView();
@@ -207,6 +211,8 @@ public partial class GitClientView : UserControl
         }
 
         this.RepositoryLocation.Text = tree.Path;
+        this.HeaderActions.IsEnabled = true;
+        this.BranchSelectorButton.IsEnabled = true;
         this.ViewTabs.Visibility = Visibility.Visible;
         this.ContextChanged?.Invoke(repository, tree);
         if (this._mode == "Changes")
@@ -256,9 +262,8 @@ public partial class GitClientView : UserControl
             this._mode = "Changes";
             this.RepositoryName.Text = title;
             this.RepositoryLocation.Text = L10n.T("Изменения комплекта · репозиториев: {0}", sources.Count);
-            this.ActionsButton.IsEnabled = false;
-            this.ActionsPanel.Visibility = Visibility.Collapsed;
-            this.ActionsColumn.Width = new GridLength(0);
+            this.HeaderActions.IsEnabled = false;
+            this.BranchSelectorButton.IsEnabled = false;
             this._selectedRepository = null;
             this._selectedCopy = null;
             this.ViewHost.Content = new ChangesView(title, sources, this._git, selectedPath, selectedWorktree, this._settings.AutoRefresh);
@@ -292,6 +297,7 @@ public partial class GitClientView : UserControl
 
             await this.RefreshBranchesAsync();
         });
+        await this.RefreshRepositoryStatusesAsync();
     }
 
     public bool FocusSearch()
@@ -312,6 +318,7 @@ public partial class GitClientView : UserControl
     private void DetachView()
     {
         this._branchVersion++;
+        this.CloseBranchPicker();
         this.ViewActionsHost.Content = null;
         switch (this.ViewHost.Content)
         {
@@ -331,6 +338,7 @@ public partial class GitClientView : UserControl
         }
 
         var version = ++this._branchVersion;
+        this._repositoryStatusVersion++;
         try
         {
             var trees = await this._git.GetWorktreesAsync(tree.Path);
@@ -343,8 +351,14 @@ public partial class GitClientView : UserControl
             var actual = trees.FirstOrDefault(copy => GitService.PathsEqual(copy.Path, tree.Path));
             this._selectedCopy = actual ?? tree;
             this.CurrentBranchLabel.Text = this._selectedCopy.BranchLabel;
-            this.BranchesPicker.ItemsSource = branches;
-            this.BranchesPicker.SelectedItem = branches.FirstOrDefault(branch => !branch.IsRemote && branch.Name == this._selectedCopy.Branch);
+            this._branches = branches;
+            var files = await this._git.GetStatusAsync(tree.Path, true);
+            if (version != this._branchVersion || this._selectedCopy?.Path != tree.Path)
+            {
+                return;
+            }
+
+            this.GetRepositoryState(tree.Path).Update(this._selectedCopy, files.Count);
             if (this._selectedRepository is { } repository)
             {
                 this.ContextChanged?.Invoke(repository, this._selectedCopy);
@@ -390,34 +404,6 @@ public partial class GitClientView : UserControl
 
     private void AddRepository_Click(object sender, RoutedEventArgs e) => this.AddRepositoryRequested?.Invoke(this, EventArgs.Empty);
 
-    private void Actions_Click(object sender, RoutedEventArgs e)
-    {
-        var visible = this.ActionsPanel.Visibility != Visibility.Visible;
-        this.ActionsPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-        this.ActionsColumn.Width = new GridLength(visible && !this.EmbeddedInWorkspace ? 260 : 0);
-        if (this.EmbeddedInWorkspace)
-        {
-            Grid.SetColumn(this.ActionsPanel, 2);
-            Grid.SetColumnSpan(this.ActionsPanel, 2);
-            this.ActionsPanel.Width = 260;
-            this.ActionsPanel.HorizontalAlignment = HorizontalAlignment.Right;
-        }
-    }
-
-    private async void Switch_Click(object sender, RoutedEventArgs e)
-    {
-        if (!this.CanLeave || this._selectedCopy is not { } tree || this.BranchesPicker.SelectedItem is not BranchInfo branch)
-        {
-            return;
-        }
-
-        await this.RunAsync(async () =>
-        {
-            await this._git.SwitchBranchAsync(tree.Path, branch.Name);
-            await this.ShowCurrentViewAsync();
-        });
-    }
-
     private async void NewBranch_Click(object sender, RoutedEventArgs e)
     {
         if (!this.CanLeave || this._selectedCopy is not { } tree)
@@ -425,12 +411,14 @@ public partial class GitClientView : UserControl
             return;
         }
 
-        var dialog = new CreateBranchWindow(tree.Path, this.BranchesPicker.Items.OfType<BranchInfo>().ToArray(), tree.Branch) { Owner = Window.GetWindow(this) };
+        this.CloseBranchPicker();
+        var dialog = new CreateBranchWindow(tree.Path, this._branches, tree.Branch) { Owner = Window.GetWindow(this) };
         if (dialog.ShowDialog() == true)
         {
             await this.RunAsync(async () =>
             {
                 await this._git.CreateBranchAsync(tree.Path, dialog.BranchName, dialog.StartPoint);
+                this._repositoryStatusVersion++;
                 await this.ShowCurrentViewAsync();
             });
         }

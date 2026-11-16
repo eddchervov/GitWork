@@ -25,6 +25,13 @@ internal static class Program
         var isPreview = args.Length == 2 && args[0] is "--preview" or "--compare" or "--graph" or "--graph-dark";
         var application = Program.CreateApplication(isPreview);
 
+        if (args.Contains("--repository-check", StringComparer.Ordinal))
+        {
+            RepositoryClientUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
         if (args.Length == 3 && args[0] == "--showcase")
         {
             Showcase.Run(application, args[1], args[2]);
@@ -77,6 +84,7 @@ internal static class Program
         Program.CheckChangeScopes();
         SelectedCommitUiChecks.Run();
         InlineWorktreeUiChecks.Run();
+        RepositoryClientUiChecks.Run();
         BundleActionsUiChecks.Run();
         LocalizationUiChecks.Run();
         UpdateServiceChecks.Run();

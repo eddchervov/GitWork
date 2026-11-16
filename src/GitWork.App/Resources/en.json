@@ -533,5 +533,20 @@
   "Удалить комплект вместе с общей папкой?\n\n{0}\n\nБудут удалены все рабочие копии и всё содержимое этой папки. Ветки и основные репозитории сохранятся.": "Delete the workspace and its root folder?\n\n{0}\n\nAll working copies and all contents of this folder will be deleted. Branches and main repositories will be preserved.",
   "Также будут удалены файлы и папки рядом с рабочими копиями:\n{0}": "Files and folders next to the working copies will also be deleted:\n{0}",
   "Общая папка не удалена": "Root folder was not deleted",
-  "Рабочие копии удалены, но не удалось удалить общую папку:\n{0}\n\n{1}": "Working copies were deleted, but the root folder could not be deleted:\n{0}\n\n{1}"
+  "Рабочие копии удалены, но не удалось удалить общую папку:\n{0}\n\n{1}": "Working copies were deleted, but the root folder could not be deleted:\n{0}\n\n{1}",
+  "Выбрать ветку": "Choose branch",
+  "Незакоммиченных файлов: {0}": "Uncommitted files: {0}",
+  "Ветки": "Branches",
+  "Закрыть список веток": "Close branch list",
+  "ТЕКУЩАЯ ВЕТКА": "CURRENT BRANCH",
+  "Поиск ветки": "Search branches",
+  "Найти ветку…": "Find branch…",
+  "Сначала сохраните или закоммитьте изменения.": "Save or commit your changes first.",
+  "Ветки репозитория": "Repository branches",
+  "ЛОКАЛЬНЫЕ ВЕТКИ": "LOCAL BRANCHES",
+  "УДАЛЁННЫЕ ВЕТКИ": "REMOTE BRANCHES",
+  "Создать локальную ветку…": "Create local branch…",
+  "Занята в другом worktree": "Checked out in another worktree",
+  "Выберите ветку для переключения": "Choose a branch to switch",
+  "Ветки не найдены": "No branches found"
 }
