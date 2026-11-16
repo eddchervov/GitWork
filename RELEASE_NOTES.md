@@ -1,15 +1,10 @@
-# Git Work 0.1
+# Git Work 0.2.0
 
-The first preview of Git Work: a Windows Git client built around worktrees.
-
-- Browse commit history with a compact branch graph.
-- Review changes in unified or side-by-side views.
-- Choose files for a commit with checkboxes and an inline commit form.
-- Create worktrees and organize related repositories into bundles.
-- Manage branches, open an IDE, or launch a terminal for an individual repository.
-- Fetch, pull with fast-forward checks, and see incoming and outgoing commit counts.
-- Switch between Russian and English, and between dark and light themes.
-- Check for future releases from Help or the notification bell.
-
-Version 0.1 is an early preview. The installer includes the .NET runtime;
-Git for Windows is required separately.
+- Keep the Repositories and Worktree views independent, with Changes as the default repository view.
+- Group repositories by parent folder; remove a repository from the list from its context menu without deleting its folder.
+- See branch and uncommitted change indicators in the repository sidebar.
+- Find and switch branches in one searchable local and remote list with the current branch pinned. Local branches switch directly when the working tree is clean; remote branches open the create-branch dialog.
+- Open the selected repository's IDE, terminal, or folder from the header. History sync controls share a row with the history tabs.
+- Delete a bundle's entire workspace root, including leftover `.artifacts`, after all worktrees have been deregistered.
+- Warn and ask for confirmation when tracked or untracked files have uncommitted changes; ignored files such as `bin` and `obj` do not block deletion.
+- Protect main and bare repositories. If root cleanup fails, keep the workspace entry available for retry.
