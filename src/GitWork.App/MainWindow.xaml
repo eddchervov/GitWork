@@ -13,8 +13,6 @@
         <Separator />
         <MenuItem Header="{local:Loc 'Добавить репозиторий…'}" Click="AddRepository_Click" />
         <MenuItem Header="{local:Loc 'Папки поиска worktree…'}" Click="ChangeRoot_Click" />
-        <MenuItem Header="{local:Loc 'Обновить'}" Click="Refresh_Click" />
-        <MenuItem x:Name="AutoRefreshMenuItem" Header="{local:Loc 'Автообновление'}" IsCheckable="True" IsChecked="True" Click="AutoRefresh_Click" />
         <MenuItem Header="{local:Loc 'Инструменты…'}" Click="Tools_Click" />
         <MenuItem Header="{local:Loc 'Язык / Language'}">
           <MenuItem x:Name="RussianLanguageItem" Header="{local:Loc 'Русский'}" Tag="ru" IsCheckable="True" IsChecked="True" Click="Language_Click" />
@@ -23,23 +21,36 @@
         <Separator />
         <MenuItem Header="{local:Loc 'Выход'}" Click="Exit_Click" />
       </MenuItem>
+      <MenuItem Header="{local:Loc '_Правка'}">
+        <MenuItem Header="{local:Loc 'Копировать'}" Command="Copy" />
+        <MenuItem Header="{local:Loc 'Вставить'}" Command="Paste" />
+        <MenuItem Header="{local:Loc 'Выделить всё'}" Command="SelectAll" />
+      </MenuItem>
+      <MenuItem Header="{local:Loc '_Вид'}">
+        <MenuItem Header="{local:Loc 'Обновить'}" Click="Refresh_Click" />
+        <MenuItem x:Name="AutoRefreshMenuItem" Header="{local:Loc 'Автообновление'}" IsCheckable="True" IsChecked="True" Click="AutoRefresh_Click" />
+        <Separator />
+        <MenuItem x:Name="LightThemeMenuItem" Header="{local:Loc 'Светлая тема'}" Tag="Light" IsCheckable="True" Click="ThemeMenu_Click" />
+        <MenuItem x:Name="DarkThemeMenuItem" Header="{local:Loc 'Тёмная тема'}" Tag="Dark" IsCheckable="True" Click="ThemeMenu_Click" />
+      </MenuItem>
       <MenuItem Header="{local:Loc '_Справка'}">
         <MenuItem Header="{local:Loc 'Проверить обновления…'}" Click="CheckUpdates_Click" />
         <Separator />
         <MenuItem Header="{local:Loc 'О программе…'}" Click="About_Click" />
       </MenuItem>
     </Menu>
-    <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="18,10">
+    <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0">
       <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="gw" Foreground="{DynamicResource AccentBrush}" FontSize="20" FontWeight="Bold" Margin="0,0,14,0" /><TextBlock Text="Git Work" FontSize="20" FontWeight="SemiBold" Margin="0,0,30,0" /><RadioButton Style="{StaticResource NavigationTab}" x:Name="RepositoriesSection" Content="{local:Loc 'Репозитории'}" GroupName="MainSection" Tag="Repositories" Checked="MainSection_Changed" Margin="0,0,20,0" /><RadioButton Style="{StaticResource NavigationTab}" x:Name="WorktreesSection" Content="Worktree" GroupName="MainSection" Tag="Worktrees" Checked="MainSection_Changed" /></StackPanel>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><RadioButton Style="{StaticResource NavigationTab}" x:Name="RepositoriesSection" Content="{local:Loc 'Репозитории'}" GroupName="MainSection" Tag="Repositories" Checked="MainSection_Changed" /><RadioButton Style="{StaticResource NavigationTab}" x:Name="WorktreesSection" Content="Worktree" GroupName="MainSection" Tag="Worktrees" Checked="MainSection_Changed" /></StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <Button x:Name="UpdatesButton" Click="CheckUpdates_Click" Padding="9,6" Margin="0,0,10,0" ToolTip="{local:Loc 'Проверить обновления'}" AutomationProperties.Name="{local:Loc 'Обновления'}">
+          <Button x:Name="UpdatesButton" Click="CheckUpdates_Click" Padding="4,2" Margin="0,0,8,0" ToolTip="{local:Loc 'Проверить обновления'}" AutomationProperties.Name="{local:Loc 'Обновления'}">
+            <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding Visibility, ElementName=UpdateBadge}" Value="Visible"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></Button.Style>
             <Grid Width="22" Height="22">
               <Viewbox Width="20" Height="20"><Canvas Width="24" Height="24"><Path Stroke="{DynamicResource TextBrush}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M 6,10 C 6,6 8,4 12,4 C 16,4 18,6 18,10 L 18,14 L 20,17 L 4,17 L 6,14 Z M 10,20 C 10,22 14,22 14,20 M 12,2 L 12,4" /></Canvas></Viewbox>
               <Ellipse x:Name="UpdateBadge" Width="7" Height="7" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed" />
             </Grid>
           </Button>
-          <ComboBox x:Name="ThemePicker" Width="150" VerticalAlignment="Center" SelectedValuePath="Tag" SelectionChanged="ThemePicker_SelectionChanged" AutomationProperties.Name="{local:Loc 'Тема приложения'}"><ComboBoxItem Content="{local:Loc 'Светлая тема'}" Tag="Light" /><ComboBoxItem Content="{local:Loc 'Тёмная тема'}" Tag="Dark" /></ComboBox>
+          <ComboBox x:Name="ThemePicker" Visibility="Collapsed" SelectedValuePath="Tag" SelectionChanged="ThemePicker_SelectionChanged" AutomationProperties.Name="{local:Loc 'Тема приложения'}"><ComboBoxItem Content="{local:Loc 'Светлая тема'}" Tag="Light" /><ComboBoxItem Content="{local:Loc 'Тёмная тема'}" Tag="Dark" /></ComboBox>
         </StackPanel>
       </Grid>
     </Border>
@@ -321,8 +332,8 @@
       </Grid>
       <ContentControl x:Name="InlineGitHost" Grid.Column="2" Grid.ColumnSpan="3" Visibility="Collapsed" />
     </Grid>
-    <Border x:Name="OperationOverlay" Grid.Row="2" Panel.ZIndex="20" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="28" MaxWidth="620" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"><StackPanel><TextBlock Text="{local:Loc 'Выполняется операция'}" FontSize="20" FontWeight="SemiBold" /><ProgressBar Height="5" IsIndeterminate="True" Margin="0,18,0,14" /><TextBlock x:Name="OperationMessage" TextWrapping="Wrap" /><TextBlock Text="{local:Loc 'Дождитесь завершения. Результат появится здесь.'}" Style="{StaticResource Caption}" Margin="0,12,0,0" /></StackPanel></Border>
-    <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="20,11">
+    <Border x:Name="OperationOverlay" Grid.Row="2" Panel.ZIndex="20" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="18" MaxWidth="620" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"><StackPanel><TextBlock Text="{local:Loc 'Выполняется операция'}" FontSize="14" FontWeight="SemiBold" /><ProgressBar Height="3" IsIndeterminate="True" Margin="0,10,0,8" /><TextBlock x:Name="OperationMessage" TextWrapping="Wrap" /></StackPanel></Border>
+    <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="12,5">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
@@ -330,7 +341,8 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <ProgressBar x:Name="BusyProgress" Width="55" Height="3" IsIndeterminate="True" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" Margin="0,0,12,0" />
-        <TextBlock Grid.Column="1" x:Name="StatusText" Text="{local:Loc 'Готово'}" FontSize="12" Foreground="{DynamicResource MutedBrush}" />
+        <TextBox Grid.Column="1" x:Name="ContextStatusText" Style="{StaticResource SelectableText}" FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="NoWrap" />
+        <TextBlock Grid.Column="2" x:Name="StatusText" Text="{local:Loc 'Готово'}" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0" />
       </Grid>
     </Border>
   </Grid>

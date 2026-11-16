@@ -15,7 +15,7 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Thumb">
-          <Border x:Name="Handle" Background="{DynamicResource ScrollThumbBrush}" CornerRadius="4" Margin="3,2" />
+          <Border x:Name="Handle" Background="{DynamicResource ScrollThumbBrush}" CornerRadius="1" Margin="3,2" />
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="Handle" Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
@@ -30,7 +30,7 @@
   </Style>
   <Style TargetType="ScrollBar">
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Width" Value="12" />
+    <Setter Property="Width" Value="10" />
     <Setter Property="Stylus.IsFlicksEnabled" Value="False" />
     <Setter Property="Template">
       <Setter.Value>
@@ -66,7 +66,7 @@
     <Style.Triggers>
       <Trigger Property="Orientation" Value="Horizontal">
         <Setter Property="Width" Value="Auto" />
-        <Setter Property="Height" Value="12" />
+        <Setter Property="Height" Value="10" />
       </Trigger>
     </Style.Triggers>
   </Style>

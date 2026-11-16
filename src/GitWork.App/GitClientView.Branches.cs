@@ -103,7 +103,7 @@ public partial class GitClientView
         }
 
         var anchor = this.BranchSelectorButton.TranslatePoint(new Point(0, this.BranchSelectorButton.ActualHeight + 5), this.ClientRoot);
-        var width = Math.Min(500, Math.Max(0, this.ClientRoot.ActualWidth - 24));
+        var width = Math.Min(570, Math.Max(0, this.ClientRoot.ActualWidth - 24));
         var left = Math.Max(12, Math.Min(anchor.X, this.ClientRoot.ActualWidth - width - 12));
         var top = Math.Max(0, anchor.Y);
         this.BranchPickerHost.Width = width;

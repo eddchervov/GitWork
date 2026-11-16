@@ -759,6 +759,8 @@ public partial class MainWindow : Window
     private void UpdateThemePicker()
     {
         this.ThemePicker.SelectedValue = ThemeManager.CurrentTheme;
+        this.LightThemeMenuItem.IsChecked = ThemeManager.CurrentTheme == "Light";
+        this.DarkThemeMenuItem.IsChecked = ThemeManager.CurrentTheme == "Dark";
     }
 
     private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();

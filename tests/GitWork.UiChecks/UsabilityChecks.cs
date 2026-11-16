@@ -108,19 +108,20 @@ internal static class UsabilityChecks
         {
             var row = new ListBoxItem { Tag = status, Content = status, Style = (Style)Application.Current.FindResource("FileRow") };
             row.ApplyTemplate();
-            var resource = status == "Добавлен" ? "FileAddedBrush" : status == "Удалён" ? "FileDeletedBrush" : "FileModifiedBrush";
-            if (row.Background != row.FindResource(resource))
+            var resource = status == "Добавлен" ? "AddedTextBrush" : status == "Удалён" ? "DeletedTextBrush" : "ModifiedTextBrush";
+            if (row.Foreground != row.FindResource(resource))
             {
-                throw new InvalidOperationException("Тип изменения должен задавать фон строки файла.");
+                throw new InvalidOperationException("Тип изменения должен обозначаться цветом текста на нейтральной строке.");
             }
 
             row.IsSelected = true;
-            if (row.Background != row.FindResource(resource))
+            if (row.Foreground != row.FindResource(resource)
+                || row.Template.FindName("Row", row) is not Border border || border.Background != row.FindResource("SelectionBrush"))
             {
-                throw new InvalidOperationException("Выделение не должно скрывать цвет типа изменения файла.");
+                throw new InvalidOperationException("Выделение строки должно быть синим и сохранять статусный цвет текста.");
             }
         }
 
-        Console.WriteLine("OK: цвет фона обозначает добавление, удаление и изменение, сохраняясь при выборе файла.");
+        Console.WriteLine("OK: статусный цвет текста сохраняется на нейтральной и выделенной строке файла.");
     }
 }

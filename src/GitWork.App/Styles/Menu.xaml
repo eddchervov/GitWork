@@ -4,12 +4,12 @@
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="5" />
-    <Setter Property="HasDropShadow" Value="True" />
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="HasDropShadow" Value="False" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ContextMenu">
-          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="7">
+          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" CornerRadius="1">
             <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
           </Border>
         </ControlTemplate>
@@ -19,18 +19,18 @@
   <Style TargetType="Menu">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="Padding" Value="12,3" />
+    <Setter Property="Padding" Value="8,2" />
   </Style>
   <Style TargetType="MenuItem">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-    <Setter Property="Padding" Value="9,8" />
+    <Setter Property="Padding" Value="8,4" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="MenuItem">
           <Grid>
-            <Border x:Name="Chrome" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="5">
+            <Border x:Name="Chrome" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="1">
               <Grid>
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition x:Name="CheckColumn" Width="24" />
@@ -43,7 +43,7 @@
               </Grid>
             </Border>
             <Popup x:Name="PART_Popup" Placement="Right" PlacementTarget="{Binding ElementName=Chrome}" IsOpen="{TemplateBinding IsSubmenuOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
-              <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="7" Padding="5" MinWidth="240">
+              <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="1" Padding="2" MinWidth="180">
                 <ScrollViewer MaxHeight="560" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                   <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" KeyboardNavigation.TabNavigation="Cycle" />
                 </ScrollViewer>

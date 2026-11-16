@@ -26,8 +26,8 @@ internal static class GraphUiChecks
         root.UpdateLayout();
         var first = list.ItemContainerGenerator.ContainerFromIndex(0) as ListBoxItem;
         var second = list.ItemContainerGenerator.ContainerFromIndex(1) as ListBoxItem;
-        if (first is null || second is null || first.ActualHeight != 56
-            || Math.Abs(second.TranslatePoint(new Point(), list).Y - first.TranslatePoint(new Point(), list).Y - 56) > 0.1)
+        if (first is null || second is null || first.ActualHeight != 30
+            || Math.Abs(second.TranslatePoint(new Point(), list).Y - first.TranslatePoint(new Point(), list).Y - 30) > 0.1)
         {
             throw new InvalidOperationException("Строки графа должны соединяться без зазоров.");
         }
@@ -59,11 +59,15 @@ internal static class GraphUiChecks
 
         var files = (ListBox)window.FindName("CommitFiles");
         var diff = (FrameworkElement)window.FindName("CommitDiff");
-        if (files.TranslatePoint(new Point(), root).X <= list.TranslatePoint(new Point(), root).X
-            || diff.TranslatePoint(new Point(), root).X <= files.TranslatePoint(new Point(), root).X
-            || diff.ActualHeight < root.ActualHeight * 0.7 || !((DiffView)diff).IsUnified)
+        var listPosition = list.TranslatePoint(new Point(), root);
+        var filesPosition = files.TranslatePoint(new Point(), root);
+        var diffPosition = diff.TranslatePoint(new Point(), root);
+        if (filesPosition.Y <= listPosition.Y || diffPosition.Y <= listPosition.Y
+            || diffPosition.X <= filesPosition.X || list.ActualHeight > root.ActualHeight * 0.6
+            || list.ActualHeight < root.ActualHeight * 0.2 || diff.ActualHeight < root.ActualHeight * 0.3
+            || !((DiffView)diff).IsUnified)
         {
-            throw new InvalidOperationException($"История, файлы и единый diff должны стоять слева направо и занимать высоту окна. Высота diff: {diff.ActualHeight}, unified: {((DiffView)diff).IsUnified}, X: {list.TranslatePoint(new Point(), root).X}/{files.TranslatePoint(new Point(), root).X}/{diff.TranslatePoint(new Point(), root).X}.");
+            throw new InvalidOperationException($"История должна располагаться над файлами и diff, а нижний diff — справа от файлов. Высота списка: {list.ActualHeight}, высота diff: {diff.ActualHeight}, unified: {((DiffView)diff).IsUnified}, Y: {listPosition.Y}/{filesPosition.Y}/{diffPosition.Y}, X: {filesPosition.X}/{diffPosition.X}.");
         }
 
         window.Close();

@@ -143,6 +143,34 @@ internal static class RepositoryClientUiChecks
                 }
 
                 remoteDialog.Close();
+                var historyTab = (RadioButton)view.FindName("HistoryTab");
+                historyTab.IsChecked = true;
+                await RepositoryClientUiChecks.WaitUntilAsync(() => content.Content is GitHistoryView { IsBusy: false });
+                var history = (GitHistoryView)content.Content;
+                var commitSearch = (TextBox)history.FindName("SearchBox");
+                var commits = (ListBox)history.FindName("CommitsList");
+                commitSearch.Text = "missing-commit";
+                await history.RefreshAsync();
+                if (commits.SelectedItem is not null || ((TextBlock)history.FindName("SearchResultText")).Text.Length == 0)
+                {
+                    throw new InvalidOperationException("Обновление истории должно сохранять активный поиск без совпадений.");
+                }
+
+                commitSearch.Clear();
+                if (commits.SelectedItem is null)
+                {
+                    throw new InvalidOperationException("Очистка поиска должна восстановить выбранный коммит и его сведения.");
+                }
+
+                commitSearch.Text = "Fixture";
+                await history.RefreshAsync();
+                if (commits.SelectedItem is not GraphCommitItem { Row.Commit.Subject: "Fixture" })
+                {
+                    throw new InvalidOperationException("После обновления истории должен оставаться выбран коммит, найденный поиском.");
+                }
+
+                ((RadioButton)view.FindName("ChangesTab")).IsChecked = true;
+                await RepositoryClientUiChecks.WaitUntilAsync(() => view.CanLeave);
                 trigger.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await RepositoryClientUiChecks.WaitUntilAsync(() => view.CanLeave);
                 window.UpdateLayout();

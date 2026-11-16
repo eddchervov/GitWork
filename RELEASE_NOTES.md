@@ -1,10 +1,10 @@
-# Git Work 0.2.0
+# Git Work 0.3.0
 
-- Keep the Repositories and Worktree views independent, with Changes as the default repository view.
-- Group repositories by parent folder; remove a repository from the list from its context menu without deleting its folder.
-- See branch and uncommitted change indicators in the repository sidebar.
-- Find and switch branches in one searchable local and remote list with the current branch pinned. Local branches switch directly when the working tree is clean; remote branches open the create-branch dialog.
-- Open the selected repository's IDE, terminal, or folder from the header. History sync controls share a row with the history tabs.
-- Delete a bundle's entire workspace root, including leftover `.artifacts`, after all worktrees have been deregistered.
-- Warn and ask for confirmation when tracked or untracked files have uncommitted changes; ignored files such as `bin` and `obj` do not block deletion.
-- Protect main and bare repositories. If root cleanup fails, keep the workspace entry available for retry.
+- Replace rounded, oversized panels with a compact flat interface and restrained dark and light themes.
+- Keep the repository, branch selector and Fetch/Pull/Push actions in a compact header; retain IDE, terminal and folder shortcuts.
+- Show change counts only for repositories with uncommitted files, without clean-state badges.
+- Use a tall searchable branch panel anchored on the left, with the current branch pinned and local and remote branches in one list.
+- Put the commit graph and message/author/date/hash table above the selected commit's files and diff.
+- Search commits while preserving the query across refreshes; clearing a query restores the selected commit.
+- Add C# syntax highlighting and addition/deletion counts while preserving selectable diff text.
+- Validate the actual Push destination immediately before sending and reject changed or multiple push destinations; use normal non-forced pushes.

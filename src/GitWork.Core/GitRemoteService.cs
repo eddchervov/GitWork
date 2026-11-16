@@ -86,6 +86,106 @@ public sealed class GitRemoteService(GitService git)
         return new RemoteOperationResult(true, false, head, null, after, true, $"Fetch завершён: {remoteName}.");
     }
 
+    public async Task<RemoteOperationResult> PushAsync(string worktree, RemoteRepositoryState expectedState)
+    {
+        var root = System.IO.Path.GetFullPath(worktree);
+        if (!GitService.PathsEqual(root, expectedState.Worktree))
+        {
+            throw new GitException("Состояние синхронизации относится к другой рабочей копии. Обновите его и повторите Push.");
+        }
+
+        if (!expectedState.CanPush)
+        {
+            throw new GitException(expectedState.PushUnavailableReason ?? "Push сейчас недоступен.");
+        }
+
+        var current = await this.ReadAsync(root);
+        if (!current.CanPush)
+        {
+            throw new GitException(current.PushUnavailableReason ?? "Push сейчас недоступен.");
+        }
+
+        var expectedRemote = expectedState.Remotes.FirstOrDefault(item => item.Name == expectedState.UpstreamRemote);
+        var currentRemote = current.Remotes.FirstOrDefault(item => item.Name == current.UpstreamRemote);
+        var expectedPushUrl = expectedRemote?.PushUrl;
+        var currentPushUrl = currentRemote?.PushUrl;
+        var expectedFetchUrls = expectedRemote?.FetchUrls ?? Array.Empty<string>();
+        var currentFetchUrls = currentRemote?.FetchUrls ?? Array.Empty<string>();
+        if (current.Branch != expectedState.Branch || current.Head != expectedState.Head
+            || current.UpstreamRemote != expectedState.UpstreamRemote || current.UpstreamBranch != expectedState.UpstreamBranch
+            || current.UpstreamRef != expectedState.UpstreamRef || expectedPushUrl != currentPushUrl
+            || !expectedFetchUrls.SequenceEqual(currentFetchUrls)
+            || current.Ahead != expectedState.Ahead || current.Behind != expectedState.Behind)
+        {
+            throw new GitException("Текущая ветка, HEAD или upstream изменились. Обновите состояние и повторите Push.");
+        }
+
+        var branch = current.Branch!;
+        var remote = current.UpstreamRemote!;
+        var upstreamBranch = current.UpstreamBranch!;
+        var before = current.Head!;
+        var upstreamRef = current.UpstreamRef!;
+        var identity = await GitRemoteService.ReadIdentityAsync(this._git, root, branch);
+        if (!identity.Matches(branch, remote, upstreamRef, upstreamBranch, before))
+        {
+            throw new GitException("Текущая ветка, HEAD или upstream изменились перед Push. Обновите состояние и повторите.");
+        }
+
+        var pushUrls = await GitRemoteService.ReadPushUrlsAsync(this._git, root, remote);
+        if (pushUrls.Length != 1 || expectedPushUrl is null || pushUrls[0] != expectedPushUrl)
+        {
+            throw new GitException("Адрес Push изменился или для upstream настроено несколько адресов. Обновите состояние.");
+        }
+
+        var pushUrl = pushUrls[0];
+        var remoteInfo = currentRemote!;
+        var updateTrackingRef = remoteInfo.FetchUrls is { Count: 1 } configuredFetchUrls && configuredFetchUrls[0] == pushUrl;
+        var trackingHead = updateTrackingRef
+            ? (await GitRemoteService.ReadOptionalAsync(this._git, root, "rev-parse", "--verify", "--end-of-options", upstreamRef))?.Trim()
+            : null;
+        if (updateTrackingRef && trackingHead is null)
+        {
+            throw new GitException("Удалённая tracking-ветка изменилась перед Push. Обновите состояние и повторите.");
+        }
+
+        try
+        {
+            await this._git.RunAsync(root, "push", "--porcelain", "--", pushUrl, $"{before}:refs/heads/{upstreamBranch}");
+        }
+        catch (GitException exception)
+        {
+            var safeMessage = exception.Message.Replace(pushUrl, GitRemoteService.SanitizeUrl(pushUrl), StringComparison.Ordinal);
+            throw new GitException(safeMessage);
+        }
+
+        var after = await GitRemoteService.ReadHeadAsync(this._git, root);
+        var trackingRefreshFailed = false;
+        if (updateTrackingRef)
+        {
+            var refreshedFetchUrls = await GitRemoteService.ReadRemoteUrlsAsync(this._git, root, remote, false);
+            if (refreshedFetchUrls.Length == 1 && refreshedFetchUrls[0] == pushUrl)
+            {
+                try
+                {
+                    await this._git.RunAsync(root, "update-ref", upstreamRef, before, trackingHead!);
+                }
+                catch (GitException)
+                {
+                    // Параллельный Fetch не должен перезаписываться результатом Push.
+                    trackingRefreshFailed = true;
+                }
+            }
+        }
+
+        var message = $"Push завершён: {remote}/{upstreamBranch}.";
+        if (trackingRefreshFailed)
+        {
+            message += " Не удалось обновить локальный счётчик коммитов. Выполните Fetch для обновления состояния.";
+        }
+
+        return new RemoteOperationResult(false, false, before, null, after, true, message);
+    }
+
     public async Task<RemoteOperationResult> PullAsync(string worktree)
     {
         var root = System.IO.Path.GetFullPath(worktree);
@@ -189,10 +289,27 @@ public sealed class GitRemoteService(GitService git)
         foreach (var name in output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var url = await GitRemoteService.ReadOptionalAsync(git, worktree, "config", "--get", "--", $"remote.{name}.url") ?? "";
-            remotes.Add(new GitRemoteInfo(name, GitRemoteService.SanitizeUrl(url.Trim())));
+            var pushUrls = await GitRemoteService.ReadPushUrlsAsync(git, worktree, name);
+            var fetchUrls = await GitRemoteService.ReadRemoteUrlsAsync(git, worktree, name, false);
+            var pushUrl = pushUrls.Length == 1 ? pushUrls[0] : null;
+            remotes.Add(new GitRemoteInfo(name, GitRemoteService.SanitizeUrl(url.Trim()), pushUrl, fetchUrls));
         }
 
         return remotes;
+    }
+
+    private static async Task<string[]> ReadPushUrlsAsync(GitService git, string worktree, string remoteName)
+    {
+        return await GitRemoteService.ReadRemoteUrlsAsync(git, worktree, remoteName, true);
+    }
+
+    private static async Task<string[]> ReadRemoteUrlsAsync(GitService git, string worktree, string remoteName, bool isPush)
+    {
+        var arguments = isPush
+            ? new[] { "remote", "get-url", "--push", "--all", "--", remoteName }
+            : new[] { "remote", "get-url", "--all", "--", remoteName };
+        var output = await GitRemoteService.ReadOptionalAsync(git, worktree, arguments);
+        return output?.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
     }
 
     private static string? GetPullBlockReason(
@@ -321,4 +438,5 @@ public sealed class GitRemoteService(GitService git)
         var builder = new UriBuilder(parsed) { UserName = "", Password = "" };
         return builder.Uri.ToString();
     }
+
 }

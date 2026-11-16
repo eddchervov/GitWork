@@ -24,8 +24,9 @@ public static class RemoteChecks
             var marker = Path.Combine(client, "remote-check-untracked.txt");
             await File.WriteAllTextAsync(marker, "Локальные данные");
             var dirtyState = await service.ReadAsync(client);
-            check(!dirtyState.CanPull && dirtyState.PullUnavailableReason?.Contains("изменения", StringComparison.OrdinalIgnoreCase) == true,
-                "Pull недоступен при локальных изменениях");
+            check(!dirtyState.CanPull && !dirtyState.CanPush
+                && dirtyState.PullUnavailableReason?.Contains("изменения", StringComparison.OrdinalIgnoreCase) == true,
+                "Pull блокируется незакоммиченными изменениями, а Push — отставанием от upstream");
             var fetch = await service.FetchAsync(client, "origin");
             var tracking = (await git.RunAsync(client, "rev-parse", "refs/remotes/origin/" + branch)).Trim();
             check(fetch.Success && fetch.FetchCompleted && tracking == head && fetch.BeforeHead == fetch.AfterHead
@@ -66,10 +67,12 @@ public static class RemoteChecks
             check(again.Success && again.BeforeHead == again.AfterHead, "Повторный Pull актуальной ветки ничего не меняет");
 
             await git.RunAsync(client, "switch", "--detach", older);
-            check(!(await service.ReadAsync(client)).CanPull, "Detached HEAD запрещает Pull");
+            var detachedState = await service.ReadAsync(client);
+            check(!detachedState.CanPull && !detachedState.CanPush, "Detached HEAD запрещает Pull и Push");
             check((await service.FetchAsync(client, "origin")).Success, "Fetch доступен в detached HEAD");
             await git.RunAsync(client, "switch", "-c", "no-upstream", head);
-            check(!(await service.ReadAsync(client)).CanPull, "Ветка без upstream объясняет недоступность Pull");
+            var noUpstreamState = await service.ReadAsync(client);
+            check(!noUpstreamState.CanPull && !noUpstreamState.CanPush, "Ветка без upstream блокирует Pull и Push");
             await git.RunAsync(client, "switch", "sync-check");
             var mergeMarker = (await git.RunAsync(client, "rev-parse", "--git-path", "MERGE_HEAD")).Trim();
             var mergePath = Path.GetFullPath(mergeMarker, client);
@@ -93,6 +96,137 @@ public static class RemoteChecks
                 "Граф открывает файлы и diff первого коммита");
             var latestFiles = await details.GetFilesAsync(client, head);
             check(latestFiles.Count > 0, "Граф читает изменения обычного коммита относительно родителя");
+
+            var pushTarget = Path.Combine(root, "push-target.git");
+            var alternatePushTarget = Path.Combine(root, "alternate-push-target.git");
+            var multiplePushTarget = Path.Combine(root, "multiple-push-target.git");
+            await git.RunAsync(root, "clone", "--bare", "--no-hardlinks", "--", remote, pushTarget);
+            await git.RunAsync(root, "clone", "--bare", "--no-hardlinks", "--", remote, alternatePushTarget);
+            await git.RunAsync(root, "clone", "--bare", "--no-hardlinks", "--", remote, multiplePushTarget);
+            await git.RunAsync(remote, "update-ref", "refs/heads/push-check", head);
+            await git.RunAsync(pushTarget, "update-ref", "refs/heads/push-check", head);
+            await git.RunAsync(alternatePushTarget, "update-ref", "refs/heads/push-check", head);
+            await git.RunAsync(multiplePushTarget, "update-ref", "refs/heads/push-check", head);
+            await git.RunAsync(client, "update-ref", "refs/remotes/origin/push-check", head);
+            await git.RunAsync(client, "remote", "set-url", "--push", "origin", pushTarget);
+            await git.RunAsync(client, "switch", "-c", "push-check", head);
+            await git.RunAsync(client, "config", "branch.push-check.remote", "origin");
+            await git.RunAsync(client, "config", "branch.push-check.merge", "refs/heads/push-check");
+            await git.RunAsync(client, "-c", "user.name=GitWork checks", "-c", "user.email=checks@example.invalid",
+                "commit", "--allow-empty", "-m", "First local push commit");
+            var stalePushState = await service.ReadAsync(client);
+            var originInfo = stalePushState.Remotes.Single(item => item.Name == "origin");
+            check(stalePushState.CanPush && stalePushState.Ahead == 1
+                && originInfo.Url == remote && originInfo.PushUrl == pushTarget,
+                "Локальный коммит доступен для Push в настроенный pushurl, отличный от fetch URL");
+            await git.RunAsync(client, "-c", "user.name=GitWork checks", "-c", "user.email=checks@example.invalid",
+                "commit", "--allow-empty", "-m", "Second local push commit");
+            var staleHeadRejected = false;
+            try
+            {
+                await service.PushAsync(client, stalePushState);
+            }
+            catch (GitException)
+            {
+                staleHeadRejected = true;
+            }
+
+            check(staleHeadRejected && (await git.RunAsync(remote, "rev-parse", "refs/heads/push-check")).Trim() == head
+                && (await git.RunAsync(pushTarget, "rev-parse", "refs/heads/push-check")).Trim() == head,
+                "Push отклоняется, если HEAD изменился после отображения состояния");
+
+            await git.RunAsync(client, "remote", "set-url", "--add", "--push", "origin", multiplePushTarget);
+            var multiplePushState = await service.ReadAsync(client);
+            var multiplePushRejected = false;
+            try
+            {
+                await service.PushAsync(client, multiplePushState);
+            }
+            catch (GitException)
+            {
+                multiplePushRejected = true;
+            }
+
+            check(!multiplePushState.CanPush && multiplePushState.PushUnavailableReason?.Contains("единственный", StringComparison.OrdinalIgnoreCase) == true
+                && multiplePushRejected
+                && (await git.RunAsync(pushTarget, "rev-parse", "refs/heads/push-check")).Trim() == head
+                && (await git.RunAsync(multiplePushTarget, "rev-parse", "refs/heads/push-check")).Trim() == head,
+                "Несколько pushurl блокируют Push, не меняя удалённые ветки");
+            await git.RunAsync(client, "remote", "set-url", "--delete", "--push", "origin", multiplePushTarget);
+
+            var expectedPushUrlState = await service.ReadAsync(client);
+            await git.RunAsync(client, "remote", "set-url", "--push", "origin", alternatePushTarget);
+            var changedPushUrlRejected = false;
+            try
+            {
+                await service.PushAsync(client, expectedPushUrlState);
+            }
+            catch (GitException)
+            {
+                changedPushUrlRejected = true;
+            }
+
+            check(changedPushUrlRejected
+                && (await git.RunAsync(pushTarget, "rev-parse", "refs/heads/push-check")).Trim() == head
+                && (await git.RunAsync(alternatePushTarget, "rev-parse", "refs/heads/push-check")).Trim() == head,
+                "Изменение pushurl после показа состояния блокирует отправку на оба сервера");
+            await git.RunAsync(client, "remote", "set-url", "--push", "origin", pushTarget);
+
+            var pushState = await service.ReadAsync(client);
+            var push = await service.PushAsync(client, pushState);
+            var pushedHead = (await git.RunAsync(client, "rev-parse", "HEAD")).Trim();
+            var stateAfterDistinctPush = await service.ReadAsync(client);
+            check(push.Success && (await git.RunAsync(pushTarget, "rev-parse", "refs/heads/push-check")).Trim() == pushedHead
+                && (await git.RunAsync(remote, "rev-parse", "refs/heads/push-check")).Trim() == head
+                && stateAfterDistinctPush.Ahead == pushState.Ahead,
+                "Push отправляет SHA HEAD в upstream pushurl, не меняя fetch-сервер или его tracking-ссылку");
+            await git.RunAsync(remote, "update-ref", "refs/heads/push-check", pushedHead);
+            await service.FetchAsync(client, "origin");
+            check((await service.ReadAsync(client)).Ahead == 0,
+                "Fetch обновляет tracking-ссылку до коммита, отправленного на другой pushurl");
+
+            var competing = Path.Combine(root, "competing-client");
+            await git.RunAsync(root, "clone", "--no-hardlinks", "--", pushTarget, competing);
+            await git.RunAsync(competing, "switch", "--track", "-c", "push-check", "origin/push-check");
+            await git.RunAsync(competing, "-c", "user.name=GitWork checks", "-c", "user.email=checks@example.invalid",
+                "commit", "--allow-empty", "-m", "Concurrent remote push commit");
+            await git.RunAsync(competing, "push", "origin", "HEAD:refs/heads/push-check");
+            var competingHead = (await git.RunAsync(competing, "rev-parse", "HEAD")).Trim();
+            await git.RunAsync(remote, "update-ref", "refs/heads/push-check", competingHead);
+            await git.RunAsync(client, "-c", "user.name=GitWork checks", "-c", "user.email=checks@example.invalid",
+                "commit", "--allow-empty", "-m", "Local push after remote advance");
+            var nonFastForwardState = await service.ReadAsync(client);
+            var nonFastForwardRejected = false;
+            try
+            {
+                await service.PushAsync(client, nonFastForwardState);
+            }
+            catch (GitException)
+            {
+                nonFastForwardRejected = true;
+            }
+
+            check(nonFastForwardRejected, "Git отклоняет Push, если удалённая ветка продвинулась параллельно");
+            await service.FetchAsync(client, "origin");
+            var divergedState = await service.ReadAsync(client);
+            check(!divergedState.CanPush && divergedState.Behind > 0,
+                "Расхождение веток блокирует Push до получения актуального состояния");
+
+            await git.RunAsync(remote, "update-ref", "refs/heads/same-push-check", head);
+            await git.RunAsync(client, "update-ref", "refs/remotes/origin/same-push-check", head);
+            await git.RunAsync(client, "switch", "-c", "same-push-check", head);
+            await git.RunAsync(client, "config", "branch.same-push-check.remote", "origin");
+            await git.RunAsync(client, "config", "branch.same-push-check.merge", "refs/heads/same-push-check");
+            await git.RunAsync(client, "remote", "set-url", "--push", "origin", remote);
+            await git.RunAsync(client, "-c", "user.name=GitWork checks", "-c", "user.email=checks@example.invalid",
+                "commit", "--allow-empty", "-m", "Push to shared fetch target");
+            var sameTargetState = await service.ReadAsync(client);
+            var sameTargetPush = await service.PushAsync(client, sameTargetState);
+            var sameTargetHead = (await git.RunAsync(client, "rev-parse", "HEAD")).Trim();
+            check(sameTargetPush.Success && (await service.ReadAsync(client)).Ahead == 0
+                && (await git.RunAsync(remote, "rev-parse", "refs/heads/same-push-check")).Trim() == sameTargetHead,
+                "Push в единственный совпадающий fetch URL обновляет tracking-ссылку без отставшего счётчика");
+
             await git.RunAsync(client, "switch", "--orphan", "empty-head");
             var orphanRows = await new GitGraphService(git).GetAsync(client);
             check(orphanRows.Count > 0 && orphanRows.All(row => !row.Commit.IsHead),

@@ -38,7 +38,7 @@ public partial class GitClientView
 
     private RepositoryRowState GetRepositoryState(string path)
     {
-        var key = Path.GetFullPath(path);
+        var key = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         if (!this._repositoryStates.TryGetValue(key, out var state))
         {
             state = new RepositoryRowState(path);
@@ -113,6 +113,7 @@ public partial class GitClientView
 
                     this._selectedCopy = tree;
                     this.CurrentBranchLabel.Text = tree.BranchLabel;
+                    this.ChangesTab.Content = files.Count > 0 ? L10n.T("Изменения {0}", files.Count) : L10n.T("Изменения");
                 }
 
                 state.Update(tree, files.Count);
@@ -133,6 +134,7 @@ public partial class GitClientView
         await Task.WhenAll(reads);
         if (version == this._repositoryStatusVersion)
         {
+            await this.RefreshSyncStateAsync();
             this._completedRepositoryStatusVersion = version;
         }
     }

@@ -45,6 +45,8 @@ public partial class ChangesView : UserControl
     public ChangesView(string title, IReadOnlyList<ChangeSource> sources, GitService git, string? selectedPath = null, string? selectedWorktree = null, bool autoRefresh = true)
     {
         this.InitializeComponent();
+        this.DiffHeaderHost.Children.Remove(this.FileHeader);
+        this.DiffViewer.Header = this.FileHeader;
         this.Unloaded += (_, _) => this.Detach();
         this._git = git;
         this._autoRefresh = autoRefresh;
@@ -325,8 +327,8 @@ public partial class ChangesView : UserControl
     {
         var entries = this._files.Where(this.IsCurrentRepository).ToArray();
         var count = entries.Count(entry => entry.IsIncluded);
-        this.TitleText.Text = L10n.T("Файлы ({0})", entries.Length);
-        this.CommitSelectionText.Text = L10n.T("Выбрано файлов: {0} из {1}", count, entries.Length);
+        this.TitleText.Text = L10n.T("Изменённые файлы · {0}", entries.Length);
+        this.CommitSelectionText.Text = L10n.T("Выбрано {0} из {1}", count, entries.Length);
         this.SelectAllBox.IsChecked = count == 0 ? false : count == entries.Length ? true : null;
         this.SelectAllBox.IsEnabled = !this._isBusy && entries.Length > 0;
         this.CommitButton.Content = this._isBusy ? L10n.T("Подождите…") : L10n.T("Создать коммит ({0})", count);
@@ -463,6 +465,11 @@ public sealed class ChangeFileEntry : INotifyPropertyChanged
     public string RepositoryName => this.Source.Name;
 
     public string FullPath => System.IO.Path.Combine(this.Source.Path, this.File.Path);
+
+    public string FileName => System.IO.Path.GetFileName(this.File.Path);
+
+    public string StatusCode => this.File.Status == "??" ? "A"
+        : this.File.Status.Trim() is { Length: > 0 } status ? status[..1] : "M";
 
     public bool HasStaged => this.File.Status.Length > 0 && this.File.Status[0] != ' ' && this.File.Status != "??";
 

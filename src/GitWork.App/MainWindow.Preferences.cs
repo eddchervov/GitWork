@@ -5,6 +5,16 @@ namespace GitWork.App;
 
 public partial class MainWindow
 {
+    private void ThemeMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: string theme })
+        {
+            this.ThemePicker.SelectedValue = theme;
+            this.LightThemeMenuItem.IsChecked = theme == "Light";
+            this.DarkThemeMenuItem.IsChecked = theme == "Dark";
+        }
+    }
+
     private void UpdateLanguageMenu()
     {
         this.RussianLanguageItem.IsChecked = L10n.Language == "ru";

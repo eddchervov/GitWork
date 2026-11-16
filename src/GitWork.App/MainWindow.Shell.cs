@@ -53,6 +53,7 @@ public partial class MainWindow
 
                 this._repository = selectedRepository;
                 this._worktree = selectedTree;
+                this.ContextStatusText.Text = selectedTree.BranchLabel + "  |  " + selectedTree.Path;
                 this._activeWorkspace = null;
                 this._worktrees = this._registeredTrees.GetValueOrDefault(selectedRepository.Path) ?? [selectedTree];
                 var stateVersion = this._stateVersion;
@@ -115,6 +116,7 @@ public partial class MainWindow
 
                 this._repository = repository;
                 this._worktree = tree;
+                this.ContextStatusText.Text = tree.BranchLabel + "  |  " + tree.Path;
                 this._activeWorkspace = null;
                 this.CreateWorktreeMenuItem.IsEnabled = true;
                 if (!this._gitClient.IsWorkspaceContext)

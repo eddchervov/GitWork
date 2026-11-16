@@ -15,6 +15,10 @@ public partial class DiffView : UserControl
     private static readonly Regex s_unifiedHunkHeader = new("^@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     public static readonly DependencyProperty IsUnifiedProperty = DependencyProperty.Register(
         nameof(DiffView.IsUnified), typeof(bool), typeof(DiffView), new PropertyMetadata(false, DiffView.OnIsUnifiedChanged));
+    public static readonly DependencyProperty HeaderProperty = DependencyProperty.Register(
+        nameof(DiffView.Header), typeof(object), typeof(DiffView));
+    public static readonly DependencyProperty FilePathProperty = DependencyProperty.Register(
+        nameof(DiffView.FilePath), typeof(string), typeof(DiffView), new PropertyMetadata(null, DiffView.OnFilePathChanged));
 
     public ObservableCollection<DiffLineView> Lines { get; } = [];
 
@@ -29,6 +33,18 @@ public partial class DiffView : UserControl
             : -1;
 
     public event Action<int>? UnifiedHunkChanged;
+
+    public object? Header
+    {
+        get => this.GetValue(DiffView.HeaderProperty);
+        set => this.SetValue(DiffView.HeaderProperty, value);
+    }
+
+    public string? FilePath
+    {
+        get => (string?)this.GetValue(DiffView.FilePathProperty);
+        set => this.SetValue(DiffView.FilePathProperty, value);
+    }
 
     public bool IsUnified
     {
@@ -53,6 +69,7 @@ public partial class DiffView : UserControl
     {
         this._patch = diff.UnifiedText;
         this._rawUnifiedHunks = this.BuildUnifiedLines(diff);
+        this.UpdateDiffStats();
         this._unifiedHunks = this.UnifiedLines.Select((line, index) => (line, index))
             .Where(item => item.line.Kind == UnifiedDiffLineKind.Hunk)
             .Select(item => item.index).ToArray();
@@ -247,10 +264,27 @@ public partial class DiffView : UserControl
         }
     }
 
+    private static void OnFilePathChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
+    {
+        if (dependencyObject is DiffView view && view.IsInitialized)
+        {
+            view.ApplyUnifiedMode();
+        }
+    }
+
     private void ApplyUnifiedMode()
     {
         this.BuildSelectableDocument();
         this.ColumnHeaders.Visibility = this.IsUnified || this.Lines.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void UpdateDiffStats()
+    {
+        var added = this.UnifiedLines.Count(line => line.Kind == UnifiedDiffLineKind.Added);
+        var removed = this.UnifiedLines.Count(line => line.Kind == UnifiedDiffLineKind.Removed);
+        this.AddedLinesText.Text = added > 0 ? $"+{added}" : "";
+        this.RemovedLinesText.Text = removed > 0 ? $"−{removed}" : "";
+        this.DiffStats.Visibility = added + removed > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void PreviousChange_Click(object sender, RoutedEventArgs e) => this.NavigateChange(-1);
@@ -348,7 +382,7 @@ public partial class DiffView : UserControl
     private void BuildSelectableDocument()
     {
         this._documentRows.Clear();
-        var document = new FlowDocument { PagePadding = new Thickness(0), FontFamily = this.CodeViewer.FontFamily, FontSize = 12 };
+        var document = new FlowDocument { PagePadding = new Thickness(0), FontFamily = this.CodeViewer.FontFamily, FontSize = this.CodeViewer.FontSize };
         if (this.IsUnified)
         {
             foreach (var line in this.UnifiedLines)
@@ -357,7 +391,7 @@ public partial class DiffView : UserControl
                 var gutter = new Run($"{line.OldNumber,5} {line.NewNumber,5} {line.Marker,1} ");
                 gutter.SetResourceReference(TextElement.ForegroundProperty, "MutedBrush");
                 paragraph.Inlines.Add(gutter);
-                paragraph.Inlines.Add(new Run(line.Text));
+                this.AppendCodeText(paragraph.Inlines, line.Text, this.ShouldHighlight(line.Kind));
                 if (line.Kind is UnifiedDiffLineKind.Added or UnifiedDiffLineKind.Removed)
                 {
                     paragraph.SetResourceReference(TextElement.BackgroundProperty, line.Kind == UnifiedDiffLineKind.Added ? "DiffAddedBrush" : "DiffRemovedBrush");
@@ -381,8 +415,14 @@ public partial class DiffView : UserControl
             foreach (var line in this.Lines)
             {
                 var row = new TableRow();
-                var before = new TableCell(new Paragraph(new Run($"{line.OldNumber,5}  {line.OldText}")) { Margin = new Thickness(0) }) { Padding = new Thickness(8, 2, 8, 2) };
-                var after = new TableCell(new Paragraph(new Run($"{line.NewNumber,5}  {line.NewText}")) { Margin = new Thickness(0) }) { Padding = new Thickness(8, 2, 8, 2), BorderBrush = (Brush)this.FindResource("BorderBrush"), BorderThickness = new Thickness(1, 0, 0, 0) };
+                var beforeParagraph = new Paragraph { Margin = new Thickness(0) };
+                beforeParagraph.Inlines.Add(new Run($"{line.OldNumber,5}  "));
+                this.AppendCodeText(beforeParagraph.Inlines, line.OldText, this.IsCSharpFile);
+                var afterParagraph = new Paragraph { Margin = new Thickness(0) };
+                afterParagraph.Inlines.Add(new Run($"{line.NewNumber,5}  "));
+                this.AppendCodeText(afterParagraph.Inlines, line.NewText, this.IsCSharpFile);
+                var before = new TableCell(beforeParagraph) { Padding = new Thickness(6, 1, 6, 1) };
+                var after = new TableCell(afterParagraph) { Padding = new Thickness(6, 1, 6, 1), BorderBrush = (Brush)this.FindResource("BorderBrush"), BorderThickness = new Thickness(1, 0, 0, 0) };
                 if (line.Kind is DiffLineKind.Removed or DiffLineKind.Modified)
                 {
                     before.SetResourceReference(TextElement.BackgroundProperty, "DiffRemovedBrush");

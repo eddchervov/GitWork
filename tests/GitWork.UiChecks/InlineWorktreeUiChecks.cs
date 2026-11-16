@@ -92,14 +92,17 @@ internal static class InlineWorktreeUiChecks
 
                 window.UpdateLayout();
                 var toolbar = (FrameworkElement)loaded.FindName("Toolbar");
-                var tabs = (FrameworkElement)view.FindName("ViewTabs");
+                var sync = (Button)view.FindName("SyncPullButton");
+                var branchButton = (Button)view.FindName("BranchSelectorButton");
                 var body = (FrameworkElement)loaded.FindName("ClientBody");
                 if (((ContentControl)view.FindName("ViewActionsHost")).Content != toolbar
-                    || Math.Abs(toolbar.TranslatePoint(new Point(0, toolbar.ActualHeight / 2), view).Y
-                        - tabs.TranslatePoint(new Point(0, tabs.ActualHeight / 2), view).Y) > 1
+                    || ((ContentControl)view.FindName("ViewActionsHost")).Visibility != Visibility.Collapsed
+                    || Math.Abs(sync.TranslatePoint(new Point(0, sync.ActualHeight / 2), view).Y
+                        - branchButton.TranslatePoint(new Point(0, branchButton.ActualHeight / 2), view).Y) > 30
+                    || !Equals(sync.Content, "Pull ↓1")
                     || body.TranslatePoint(new Point(), loaded).Y > 12)
                 {
-                    throw new InvalidOperationException("Кнопки синхронизации должны стоять рядом с вкладками без отдельной пустой полосы над историей.");
+                    throw new InvalidOperationException("Кнопки синхронизации должны стоять в общей шапке выбранного worktree без лишней строки над историей.");
                 }
 
                 var contentWidth = host.ActualWidth;

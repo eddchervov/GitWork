@@ -1,21 +1,27 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <SolidColorBrush x:Key="BackgroundBrush" Color="#F4F7FA" />
+  <SolidColorBrush x:Key="BackgroundBrush" Color="#F3F4F6" />
   <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="RaisedBrush" Color="#EAF0F5" />
-  <SolidColorBrush x:Key="BorderBrush" Color="#CCD6E0" />
-  <SolidColorBrush x:Key="TextBrush" Color="#182C3D" />
-  <SolidColorBrush x:Key="MutedBrush" Color="#53677A" />
-  <SolidColorBrush x:Key="AccentBrush" Color="#087F70" />
-  <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#DDF2EC" />
-  <SolidColorBrush x:Key="WarningBrush" Color="#915400" />
+  <SolidColorBrush x:Key="RaisedBrush" Color="#E8E9EC" />
+  <SolidColorBrush x:Key="BorderBrush" Color="#D0D1D5" />
+  <SolidColorBrush x:Key="TextBrush" Color="#25262A" />
+  <SolidColorBrush x:Key="MutedBrush" Color="#696B72" />
+  <SolidColorBrush x:Key="AccentBrush" Color="#1976D2" />
+  <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#E4EDF7" />
+  <SolidColorBrush x:Key="WarningBrush" Color="#956A12" />
   <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SelectionBrush" Color="#A7DACE" />
-  <SolidColorBrush x:Key="SelectedBorderBrush" Color="#58A393" />
-  <SolidColorBrush x:Key="ScrollThumbBrush" Color="#A2B2C2" />
-  <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#738A9F" />
+  <SolidColorBrush x:Key="SelectionBrush" Color="#D7E5F5" />
+  <SolidColorBrush x:Key="SelectedBorderBrush" Color="#1976D2" />
+  <SolidColorBrush x:Key="ScrollThumbBrush" Color="#B8BAC0" />
+  <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#92959D" />
+  <SolidColorBrush x:Key="AddedTextBrush" Color="#26733B" />
+  <SolidColorBrush x:Key="ModifiedTextBrush" Color="#956A12" />
+  <SolidColorBrush x:Key="DeletedTextBrush" Color="#B52F3A" />
+  <SolidColorBrush x:Key="SyntaxKeywordBrush" Color="#165DAA" />
+  <SolidColorBrush x:Key="SyntaxStringBrush" Color="#8A6415" />
+  <SolidColorBrush x:Key="SyntaxCommentBrush" Color="#59734F" />
   <SolidColorBrush x:Key="DiffRemovedBrush" Color="#FCE2E4" />
   <SolidColorBrush x:Key="DiffAddedBrush" Color="#DCF1E4" />
-  <SolidColorBrush x:Key="FileModifiedBrush" Color="#FFF5D8" />
-  <SolidColorBrush x:Key="FileAddedBrush" Color="#E4F4E9" />
-  <SolidColorBrush x:Key="FileDeletedBrush" Color="#FBE7EA" />
+  <SolidColorBrush x:Key="FileModifiedBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="FileAddedBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="FileDeletedBrush" Color="#FFFFFF" />
 </ResourceDictionary>

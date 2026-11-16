@@ -154,6 +154,7 @@ public partial class GitClientView : UserControl
 
             this._selectedRepository = repository;
             this._selectedCopy = null;
+            this.ClearSyncState();
             this.CurrentBranchLabel.Text = "";
             this._branches = [];
             this.BranchSelectorButton.IsEnabled = false;
@@ -264,6 +265,7 @@ public partial class GitClientView : UserControl
             this.RepositoryLocation.Text = L10n.T("Изменения комплекта · репозиториев: {0}", sources.Count);
             this.HeaderActions.IsEnabled = false;
             this.BranchSelectorButton.IsEnabled = false;
+            this.ClearSyncState();
             this._selectedRepository = null;
             this._selectedCopy = null;
             this.ViewHost.Content = new ChangesView(title, sources, this._git, selectedPath, selectedWorktree, this._settings.AutoRefresh);
@@ -359,10 +361,13 @@ public partial class GitClientView : UserControl
             }
 
             this.GetRepositoryState(tree.Path).Update(this._selectedCopy, files.Count);
+            this.ChangesTab.Content = files.Count > 0 ? L10n.T("Изменения {0}", files.Count) : L10n.T("Изменения");
             if (this._selectedRepository is { } repository)
             {
                 this.ContextChanged?.Invoke(repository, this._selectedCopy);
             }
+
+            await this.RefreshSyncStateAsync();
         }
         catch (Exception exception) when (exception is GitException or IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
@@ -379,8 +384,8 @@ public partial class GitClientView : UserControl
         this.RepositorySidebar.Visibility = workspace ? Visibility.Collapsed : Visibility.Visible;
         this.RepositorySplitter.Visibility = workspace ? Visibility.Collapsed : Visibility.Visible;
         this.RepositoryColumn.MinWidth = workspace ? 0 : 180;
-        this.RepositoryColumn.Width = new GridLength(workspace ? 0 : 240);
-        this.RepositorySplitterColumn.Width = new GridLength(workspace ? 0 : 7);
+        this.RepositoryColumn.Width = new GridLength(workspace ? 0 : 270);
+        this.RepositorySplitterColumn.Width = new GridLength(workspace ? 0 : 1);
         this.BackToWorkspace.Visibility = workspace && !this.EmbeddedInWorkspace ? Visibility.Visible : Visibility.Collapsed;
     }
 

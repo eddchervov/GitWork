@@ -28,6 +28,8 @@ public partial class GitHistoryView : UserControl
     public GitHistoryView(IReadOnlyList<GraphRepositoryChoice> repositories, GitService git)
     {
         this.InitializeComponent();
+        ((Grid)this.CommitFileHeader.Parent).Children.Remove(this.CommitFileHeader);
+        this.CommitDiff.Header = this.CommitFileHeader;
         this._graph = new GitGraphService(git);
         this._remote = new GitRemoteService(git);
         this._details = new GitCommitDetailsService(git);
@@ -118,6 +120,40 @@ public partial class GitHistoryView : UserControl
         this._showAllBranches = mode.ShowAll;
         this._limit = 200;
         await this.ReloadAsync();
+    }
+
+    private void Search_Changed(object sender, TextChangedEventArgs e) => this.ApplyCommitSearch();
+
+    private bool ApplyCommitSearch()
+    {
+        var query = this.SearchBox.Text.Trim();
+        this.SearchResultText.Text = "";
+        if (query.Length == 0)
+        {
+            if (this.CommitsList.SelectedItem is null)
+            {
+                this.CommitsList.SelectedItem = this.CommitsList.Items.OfType<GraphCommitItem>().FirstOrDefault(item => item.Row.Commit.IsHead)
+                    ?? this.CommitsList.Items.OfType<GraphCommitItem>().FirstOrDefault();
+            }
+
+            return false;
+        }
+
+        var match = this.CommitsList.Items.OfType<GraphCommitItem>().FirstOrDefault(item => SearchMatcher.Matches(
+            query, item.Row.Commit.Subject, item.Row.Commit.Author, item.Row.Commit.ShortHash, item.Row.Commit.Hash,
+            string.Join(" ", item.Row.Commit.References)));
+        if (match is null)
+        {
+            this.CommitsList.SelectedItem = null;
+            this.SearchResultText.Text = L10n.T("Совпадений нет");
+
+            return true;
+        }
+
+        this.CommitsList.SelectedItem = match;
+        this.CommitsList.ScrollIntoView(match);
+
+        return true;
     }
 
     private async void MergeToggle_Click(object sender, RoutedEventArgs e)
@@ -211,13 +247,16 @@ public partial class GitHistoryView : UserControl
         this.CommitsList.SelectedItem = this.CommitsList.Items.OfType<GraphCommitItem>().FirstOrDefault(item => item.Row.Commit.Hash == selectedHash)
             ?? this.CommitsList.Items.OfType<GraphCommitItem>().FirstOrDefault(item => item.Row.Commit.IsHead)
             ?? this.CommitsList.Items.OfType<GraphCommitItem>().FirstOrDefault();
-        if (selectedHash is null && this.CommitsList.SelectedItem is { } selected)
+        if (!this.ApplyCommitSearch())
         {
-            this.CommitsList.ScrollIntoView(selected);
-        }
-        else
-        {
-            ViewState.RestoreScroll(this.CommitsList, scroll);
+            if (selectedHash is null && this.CommitsList.SelectedItem is { } selected)
+            {
+                this.CommitsList.ScrollIntoView(selected);
+            }
+            else
+            {
+                ViewState.RestoreScroll(this.CommitsList, scroll);
+            }
         }
 
         try

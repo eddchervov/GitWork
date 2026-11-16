@@ -9,22 +9,22 @@
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style x:Key="SyncCount" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontSize" Value="12" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="Margin" Value="8,0,0,0" />
+      <Setter Property="Margin" Value="4,0,0,0" />
       <Style.Triggers>
         <Trigger Property="Text" Value="0"><Setter Property="Foreground" Value="{DynamicResource MutedBrush}" /></Trigger>
       </Style.Triggers>
     </Style>
   </UserControl.Resources>
-  <Grid Margin="12">
+  <Grid Margin="8,4">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition />
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
-    <Grid x:Name="Toolbar" Margin="0,0,0,12">
+    <Grid x:Name="Toolbar" Margin="0,0,0,5">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="160" />
         <ColumnDefinition Width="*" MinWidth="160" />
@@ -33,195 +33,195 @@
         <ColumnDefinition Width="Auto" />
         <ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
-      <ComboBox x:Name="RepositoryPicker" DisplayMemberPath="Name" SelectionChanged="Repository_Changed" Margin="0,0,12,0" AutomationProperties.Name="{local:Loc 'Репозиторий графа'}" />
-      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0">
-        <TextBlock x:Name="BranchSummary" VerticalAlignment="Center" Margin="0,0,8,0">
+      <ComboBox x:Name="RepositoryPicker" DisplayMemberPath="Name" SelectionChanged="Repository_Changed" Margin="0,0,8,0" AutomationProperties.Name="{local:Loc 'Репозиторий графа'}" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,6,0">
+        <TextBlock x:Name="BranchSummary" VerticalAlignment="Center" Margin="0,0,6,0">
           <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Caption}"><Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers></Style></TextBlock.Style>
         </TextBlock>
         <StackPanel x:Name="SyncCounters" Orientation="Horizontal" Visibility="Collapsed">
-          <Border x:Name="OutgoingCounter" Background="{DynamicResource RaisedBrush}" CornerRadius="6" Padding="10,6" Margin="0,0,6,0">
+          <Border x:Name="OutgoingCounter" Background="{DynamicResource RaisedBrush}" Padding="5,2" Margin="0,0,4,0">
             <StackPanel Orientation="Horizontal"><TextBlock Text="{local:Loc '↑ К отправке'}" Style="{StaticResource Caption}" VerticalAlignment="Center" /><TextBlock x:Name="OutgoingCount" Text="0" Style="{StaticResource SyncCount}" /></StackPanel>
           </Border>
-          <Border x:Name="IncomingCounter" Background="{DynamicResource RaisedBrush}" CornerRadius="6" Padding="10,6">
+          <Border x:Name="IncomingCounter" Background="{DynamicResource RaisedBrush}" Padding="5,2">
             <StackPanel Orientation="Horizontal"><TextBlock Text="{local:Loc '↓ К получению'}" Style="{StaticResource Caption}" VerticalAlignment="Center" /><TextBlock x:Name="IncomingCount" Text="0" Style="{StaticResource SyncCount}" /></StackPanel>
           </Border>
         </StackPanel>
       </StackPanel>
-      <StackPanel x:Name="RemoteSelector" Grid.Column="2" Margin="0,0,8,0" Visibility="Collapsed">
-        <ComboBox x:Name="RemotePicker" Width="140" DisplayMemberPath="Name" Padding="7,4" SelectionChanged="Remote_Changed" AutomationProperties.Name="{local:Loc 'Сервер для Fetch'}" />
+      <StackPanel x:Name="RemoteSelector" Grid.Column="2" Margin="0,0,6,0" Visibility="Collapsed">
+        <ComboBox x:Name="RemotePicker" Width="140" Padding="5,2" DisplayMemberPath="Name" SelectionChanged="Remote_Changed" AutomationProperties.Name="{local:Loc 'Сервер для Fetch'}" />
       </StackPanel>
-      <Button x:Name="FetchButton" Grid.Column="3" Content="Fetch" Click="Fetch_Click" Padding="12,7" Margin="0,0,8,0" ToolTip="{local:Loc 'Загрузить коммиты и обновить удалённые ветки. Рабочие файлы не меняются.'}" />
-      <Button x:Name="PullButton" Grid.Column="4" Content="Pull" Click="Pull_Click" Padding="12,7" Margin="0,0,8,0" Style="{StaticResource PrimaryButton}" ToolTip="{local:Loc 'Обновить текущую ветку из её upstream только fast-forward.'}" />
-      <Button x:Name="RefreshButton" Grid.Column="5" Content="↻" Click="Refresh_Click" Padding="12,7" ToolTip="{local:Loc 'Обновить локальную историю'}" AutomationProperties.Name="{local:Loc 'Обновить историю'}" />
+      <Button x:Name="FetchButton" Grid.Column="3" Content="Fetch" Click="Fetch_Click" Padding="8,3" Margin="0,0,5,0" ToolTip="{local:Loc 'Загрузить коммиты и обновить удалённые ветки. Рабочие файлы не меняются.'}" />
+      <Button x:Name="PullButton" Grid.Column="4" Content="Pull" Click="Pull_Click" Padding="8,3" Margin="0,0,5,0" Style="{StaticResource PrimaryButton}" ToolTip="{local:Loc 'Обновить текущую ветку из её upstream только fast-forward.'}" />
+      <Button x:Name="RefreshButton" Grid.Column="5" Content="↻" Click="Refresh_Click" Padding="7,3" ToolTip="{local:Loc 'Обновить локальную историю'}" AutomationProperties.Name="{local:Loc 'Обновить историю'}" />
     </Grid>
     <Grid x:Name="ClientBody" Grid.Row="1">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="260" MinWidth="190" />
-        <ColumnDefinition Width="7" />
-        <ColumnDefinition Width="190" MinWidth="130" />
-        <ColumnDefinition Width="7" />
-        <ColumnDefinition Width="*" MinWidth="240" />
-      </Grid.ColumnDefinitions>
-      <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="7" ClipToBounds="True">
-        <Grid>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
-          <DockPanel Margin="10,9">
-            <ComboBox x:Name="GraphModePicker" DockPanel.Dock="Right" Width="140" Padding="8,5" SelectionChanged="GraphMode_Changed" AutomationProperties.Name="{local:Loc 'Режим графа'}" />
-            <TextBlock Text="{local:Loc 'История'}" FontWeight="SemiBold" VerticalAlignment="Center" />
-          </DockPanel>
-          <Grid Grid.Row="1">
-            <ListBox x:Name="CommitsList" SelectionChanged="Commit_Changed" PreviewMouseRightButtonDown="Commit_RightClick" PreviewGotKeyboardFocus="Commit_GotFocus" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{local:Loc 'Граф коммитов'}">
-              <ListBox.ContextMenu>
-                <ContextMenu DataContext="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource Self}}">
-                  <MenuItem Header="{local:Loc 'Создать ветку от коммита…'}" Click="BranchFromCommit_Click" />
-                  <MenuItem Header="{local:Loc 'Создать worktree от коммита…'}" Click="WorktreeFromCommit_Click" />
-                  <Separator />
-                  <MenuItem Header="{local:Loc 'Cherry-pick в ветку…'}" Click="CherryPick_Click" />
-                  <MenuItem Header="{local:Loc 'Копировать хеш коммита'}" Click="CopyCommit_Click" />
-                </ContextMenu>
-              </ListBox.ContextMenu>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="2*" MinHeight="150" />
+        <RowDefinition Height="5" />
+        <RowDefinition Height="3*" MinHeight="170" />
+      </Grid.RowDefinitions>
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid Margin="0,0,0,4">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="{local:Loc 'Поиск по сообщению, автору или хешу коммита'}" AutomationProperties.Name="{local:Loc 'Найти коммит'}" Padding="6,3" />
+          <TextBlock Text="{local:Loc 'Найти коммит…'}" Margin="8,0" VerticalAlignment="Center" IsHitTestVisible="False" Foreground="{DynamicResource MutedBrush}">
+            <TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource Caption}"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding Text.Length, ElementName=SearchBox}" Value="0"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+          </TextBlock>
+          <TextBlock x:Name="SearchResultText" Grid.Column="1" Style="{StaticResource Caption}" Margin="8,0" VerticalAlignment="Center" />
+          <ComboBox x:Name="GraphModePicker" Grid.Column="2" Width="125" Padding="5,2" SelectionChanged="GraphMode_Changed" AutomationProperties.Name="{local:Loc 'Режим графа'}" />
+        </Grid>
+        <Grid Grid.Row="1" Height="24" Background="{DynamicResource SurfaceBrush}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="90" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="160" />
+            <ColumnDefinition Width="150" />
+            <ColumnDefinition Width="120" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="{local:Loc 'Граф'}" Margin="7,0" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+          <TextBlock Grid.Column="1" Text="{local:Loc 'Сообщение'}" Margin="7,0" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+          <TextBlock Grid.Column="2" Text="{local:Loc 'Автор'}" Margin="7,0" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+          <TextBlock Grid.Column="3" Text="{local:Loc 'Дата'}" Margin="7,0" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+          <TextBlock Grid.Column="4" Text="{local:Loc 'Хеш'}" Margin="7,0" VerticalAlignment="Center" Style="{StaticResource Caption}" />
+        </Grid>
+        <Grid Grid.Row="2">
+          <ListBox x:Name="CommitsList" SelectionChanged="Commit_Changed" PreviewMouseRightButtonDown="Commit_RightClick" PreviewGotKeyboardFocus="Commit_GotFocus" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{local:Loc 'Граф коммитов'}">
+            <ListBox.ContextMenu>
+              <ContextMenu DataContext="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource Self}}">
+                <MenuItem Header="{local:Loc 'Создать ветку от коммита…'}" Click="BranchFromCommit_Click" />
+                <MenuItem Header="{local:Loc 'Создать worktree от коммита…'}" Click="WorktreeFromCommit_Click" />
+                <Separator />
+                <MenuItem Header="{local:Loc 'Cherry-pick в ветку…'}" Click="CherryPick_Click" />
+                <MenuItem Header="{local:Loc 'Копировать хеш коммита'}" Click="CopyCommit_Click" />
+              </ContextMenu>
+            </ListBox.ContextMenu>
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                      <Border x:Name="RowBorder" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,1">
+                        <ContentPresenter />
+                      </Border>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource RaisedBrush}" /></Trigger>
+                        <Trigger Property="IsSelected" Value="True"><Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource AccentSurfaceBrush}" /></Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="RowBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid Height="30">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="90" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="160" />
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="120" />
+                  </Grid.ColumnDefinitions>
+                  <local:GitGraphView Row="{Binding Row}" Width="90" LaneCount="{Binding LaneCount}" RowHeight="30" Height="30" ToolTip="{Binding GraphHint}" />
+                  <DockPanel Grid.Column="1" LastChildFill="True" Margin="7,0">
+                    <Button DockPanel.Dock="Right" Content="{Binding MergeToggleLabel}" Click="MergeToggle_Click" Padding="3,0" FontSize="12" MinWidth="18" Height="20" Margin="4,0,0,0" ToolTip="{Binding MergeToggleHint}" AutomationProperties.Name="{local:Loc 'Раскрыть или свернуть влитую ветку'}">
+                      <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                          <Setter Property="Visibility" Value="Collapsed" />
+                          <Style.Triggers><DataTrigger Binding="{Binding CanExpandMerge}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
+                        </Style>
+                      </Button.Style>
+                    </Button>
+                    <ItemsControl DockPanel.Dock="Right" ItemsSource="{Binding Badges}" MaxWidth="220" ClipToBounds="True" VerticalAlignment="Center">
+                      <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate><DataTemplate><Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="3,0" Margin="3,0,0,0" ToolTip="{Binding FullName}"><TextBlock Text="{Binding Name}" Foreground="{DynamicResource MutedBrush}" FontSize="9" TextWrapping="NoWrap" MaxWidth="54" TextTrimming="CharacterEllipsis" /></Border></DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBox Text="{Binding Row.Commit.Subject, Mode=OneWay}" Style="{StaticResource SelectableLabel}" FontSize="12" ToolTip="{Binding Row.Commit.Subject}" />
+                  </DockPanel>
+                  <TextBox Grid.Column="2" Text="{Binding Row.Commit.Author, Mode=OneWay}" Style="{StaticResource SelectableLabel}" FontSize="12" Margin="7,0" ToolTip="{Binding Row.Commit.Author}" />
+                  <TextBox Grid.Column="3" Text="{Binding DateLabel, Mode=OneWay}" Style="{StaticResource SelectableLabel}" FontSize="12" Margin="7,0" />
+                  <TextBox Grid.Column="4" Margin="7,0" Text="{Binding Row.Commit.ShortHash, Mode=OneWay}" Style="{StaticResource SelectableLabel}" FontSize="12" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <TextBlock x:Name="EmptyGraph" Text="{local:Loc 'Загрузка истории…'}" Style="{StaticResource Caption}" Margin="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+        </Grid>
+        <DockPanel Grid.Row="3" Margin="0,3,0,0">
+          <Button x:Name="MoreButton" Content="{local:Loc 'Ещё коммиты'}" DockPanel.Dock="Right" Padding="7,2" FontSize="12" Click="More_Click" />
+          <TextBlock x:Name="HistoryCount" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+        </DockPanel>
+      </Grid>
+      <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="{DynamicResource BackgroundBrush}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" />
+      <Grid Grid.Row="2" x:Name="DiffPanel">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
+        <Grid Margin="0,0,0,4">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+          <TextBox x:Name="CommitSummary" Style="{StaticResource SelectableLabel}" FontSize="13" FontWeight="SemiBold" MaxWidth="420" Margin="0,0,8,0" />
+          <TextBox x:Name="CommitMetadata" Grid.Column="1" Style="{StaticResource SelectableLabel}" Foreground="{DynamicResource MutedBrush}" FontSize="11" MaxWidth="300" />
+          <WrapPanel x:Name="CommitActions" Grid.Column="3" HorizontalAlignment="Right">
+            <Button Content="{local:Loc 'Ветка отсюда…'}" Click="BranchFromCommit_Click" FontSize="11" Padding="7,2" Margin="0,0,4,0" />
+            <Button Content="{local:Loc 'Worktree отсюда…'}" Click="WorktreeFromCommit_Click" FontSize="11" Padding="7,2" Margin="0,0,4,0" />
+            <Button Content="Cherry-pick…" Click="CherryPick_Click" FontSize="11" Padding="7,2" Margin="0,0,4,0" />
+            <Button x:Name="ContinueCherryButton" Content="{local:Loc 'Продолжить cherry-pick'}" Click="ContinueCherry_Click" FontSize="11" Padding="7,2" Margin="0,0,4,0" Visibility="Collapsed" />
+            <Button x:Name="AbortCherryButton" Content="{local:Loc 'Отменить cherry-pick'}" Click="AbortCherry_Click" FontSize="11" Padding="7,2" Visibility="Collapsed" />
+          </WrapPanel>
+        </Grid>
+        <Grid Grid.Row="1">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="270" MinWidth="190" /><ColumnDefinition Width="5" /><ColumnDefinition Width="*" MinWidth="240" /></Grid.ColumnDefinitions>
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
+            <DockPanel Margin="0,0,0,3" Background="{DynamicResource SurfaceBrush}">
+              <TextBlock x:Name="FilesCount" DockPanel.Dock="Right" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="0,0,6,0" />
+              <TextBlock Text="{local:Loc 'Файлы'}" FontWeight="SemiBold" Margin="6,2" />
+            </DockPanel>
+            <ListBox x:Name="CommitFiles" Grid.Row="1" SelectionChanged="File_Changed" AutomationProperties.Name="{local:Loc 'Файлы выбранного коммита'}">
               <ListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem">
-                  <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-                  <Setter Property="Height" Value="56" />
-                  <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                  <Setter Property="Template">
-                    <Setter.Value>
-                      <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="RowBorder" Background="Transparent">
-                          <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                          <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource RaisedBrush}" />
-                          </Trigger>
-                          <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
-                          </Trigger>
-                          <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="RowBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                            <Setter TargetName="RowBorder" Property="BorderThickness" Value="0,0,0,1" />
-                          </Trigger>
-                        </ControlTemplate.Triggers>
-                      </ControlTemplate>
-                    </Setter.Value>
-                  </Setter>
+                <Style TargetType="ListBoxItem" BasedOn="{StaticResource FileRow}">
+                  <Setter Property="Tag" Value="{Binding File.StatusDescription}" />
+                  <Setter Property="ToolTip" Value="{Binding File.StatusDescription,Converter={x:Static local:L10n.StringConverter}}" />
+                  <Setter Property="Padding" Value="5,3" />
+                  <Setter Property="Margin" Value="0" />
                 </Style>
               </ListBox.ItemContainerStyle>
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Grid Height="56">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="Auto" />
-                      <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <local:GitGraphView Row="{Binding Row}" Width="{Binding GraphWidth}" LaneCount="{Binding LaneCount}" RowHeight="56" Height="56" ToolTip="{Binding GraphHint}" />
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,8,0" ClipToBounds="True">
-                      <DockPanel LastChildFill="True">
-                        <Button DockPanel.Dock="Right" Content="{Binding MergeToggleLabel}" Click="MergeToggle_Click" Padding="5,0" FontSize="14" MinWidth="22" Height="20" Margin="4,0,0,0" ToolTip="{Binding MergeToggleHint}" AutomationProperties.Name="{local:Loc 'Раскрыть или свернуть влитую ветку'}">
-                          <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                              <Setter Property="Visibility" Value="Collapsed" />
-                              <Style.Triggers>
-                                <DataTrigger Binding="{Binding CanExpandMerge}" Value="True">
-                                  <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                              </Style.Triggers>
-                            </Style>
-                          </Button.Style>
-                        </Button>
-                        <TextBox Text="{Binding Row.Commit.Subject, Mode=OneWay}" Style="{StaticResource SelectableLabel}" FontSize="12" FontWeight="SemiBold" ToolTip="{Binding Row.Commit.Subject}" VerticalAlignment="Center" />
-                      </DockPanel>
-                      <TextBox Text="{Binding MetadataLabel, Mode=OneWay}" Style="{StaticResource SelectableLabel}" FontSize="10" Foreground="{DynamicResource MutedBrush}" ToolTip="{Binding MetadataLabel}" Margin="0,2,0,0" />
-                      <ItemsControl ItemsSource="{Binding Badges}" Margin="0,2,0,0">
-                        <ItemsControl.ItemsPanel>
-                          <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                          </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate>
-                            <Border Background="{Binding Background}" CornerRadius="3" Padding="4,0" Margin="0,0,4,0" ToolTip="{Binding FullName}">
-                              <TextBlock Text="{Binding Name}" Foreground="{Binding Foreground}" FontSize="9" TextWrapping="NoWrap" MaxWidth="92" TextTrimming="CharacterEllipsis" />
-                            </Border>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-                  </Grid>
+                  <DockPanel ToolTip="{Binding DisplayPath}">
+                    <Border DockPanel.Dock="Left" Background="{DynamicResource AccentSurfaceBrush}" Padding="3,0" Margin="0,0,5,0" VerticalAlignment="Top"><TextBlock Text="{Binding StatusCode}" Foreground="{DynamicResource AccentBrush}" FontSize="10" FontWeight="SemiBold" /></Border>
+                    <TextBlock Text="{Binding DisplayPath}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="12" />
+                  </DockPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <TextBlock x:Name="EmptyGraph" Text="{local:Loc 'Загрузка истории…'}" Style="{StaticResource Caption}" Margin="16" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
           </Grid>
-          <DockPanel Grid.Row="2" Margin="10,8">
-            <Button x:Name="MoreButton" Content="{local:Loc 'Ещё коммиты'}" DockPanel.Dock="Right" Padding="9,5" FontSize="12" Click="More_Click" />
-            <TextBlock x:Name="HistoryCount" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-          </DockPanel>
+          <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{DynamicResource BackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
+          <Grid Grid.Column="2">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
+            <TextBox x:Name="FileTitle" Text="{local:Loc 'Выберите файл'}" Style="{StaticResource SelectableLabel}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Visibility="Collapsed" />
+            <local:DiffView x:Name="CommitDiff" Grid.Row="0" Grid.RowSpan="2" FilePath="{Binding Text, ElementName=FileTitle}" Margin="5,0,0,0" />
+                <DockPanel x:Name="CommitFileHeader" Background="{DynamicResource SurfaceBrush}">
+                  <Button x:Name="FileHistoryButton" Content="{local:Loc 'История файла'}" DockPanel.Dock="Right" Click="FileHistory_Click" FontSize="11" Padding="6,2" Margin="4,0,0,0" IsEnabled="False" />
+                  <TextBox Text="{Binding Text, ElementName=FileTitle}" Style="{StaticResource SelectableLabel}" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="6,2" />
+                </DockPanel>
+          </Grid>
         </Grid>
-      </Border>
-      <GridSplitter Grid.Column="1" Width="7" HorizontalAlignment="Stretch" Background="{DynamicResource BackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
-      <Grid Grid.Column="2" Margin="5,0">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition />
-        </Grid.RowDefinitions>
-        <DockPanel Margin="6,12,6,13">
-          <TextBlock x:Name="FilesCount" DockPanel.Dock="Right" Style="{StaticResource Caption}" VerticalAlignment="Center" />
-          <TextBlock Text="{local:Loc 'Файлы'}" FontWeight="SemiBold" />
-        </DockPanel>
-        <ListBox x:Name="CommitFiles" Grid.Row="1" SelectionChanged="File_Changed" AutomationProperties.Name="{local:Loc 'Файлы выбранного коммита'}">
-          <ListBox.ItemContainerStyle>
-            <Style TargetType="ListBoxItem" BasedOn="{StaticResource FileRow}">
-              <Setter Property="Tag" Value="{Binding File.StatusDescription}" />
-              <Setter Property="ToolTip" Value="{Binding File.StatusDescription,Converter={x:Static local:L10n.StringConverter}}" />
-              <Setter Property="Padding" Value="8,5" />
-              <Setter Property="Margin" Value="0,0,0,3" />
-            </Style>
-          </ListBox.ItemContainerStyle>
-          <ListBox.ItemTemplate>
-            <DataTemplate>
-              <DockPanel ToolTip="{Binding DisplayPath}">
-                <Border DockPanel.Dock="Left" Background="{DynamicResource AccentSurfaceBrush}" CornerRadius="3" Padding="4,1" Margin="0,0,7,0" VerticalAlignment="Top">
-                  <TextBlock Text="{Binding StatusCode}" Foreground="{DynamicResource AccentBrush}" FontSize="10" FontWeight="SemiBold" />
-                </Border>
-                <StackPanel>
-                  <TextBlock Text="{Binding DisplayPath}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="12" />
-                </StackPanel>
-              </DockPanel>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-      </Grid>
-      <GridSplitter Grid.Column="3" Width="7" HorizontalAlignment="Stretch" Background="{DynamicResource BackgroundBrush}" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
-      <Grid x:Name="DiffPanel" Grid.Column="4" Margin="12,0,0,0">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition />
-        </Grid.RowDefinitions>
-        <TextBox x:Name="CommitSummary" Style="{StaticResource SelectableLabel}" FontSize="15" FontWeight="SemiBold" Margin="0,8,0,4" MaxHeight="44" />
-        <TextBox x:Name="CommitMetadata" Grid.Row="1" Style="{StaticResource SelectableLabel}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,0,0,10" />
-        <WrapPanel x:Name="CommitActions" Grid.Row="2" Margin="0,0,0,10">
-          <Button Content="{local:Loc 'Ветка отсюда…'}" Click="BranchFromCommit_Click" FontSize="12" Padding="9,6" Margin="0,0,6,4" />
-          <Button Content="{local:Loc 'Worktree отсюда…'}" Click="WorktreeFromCommit_Click" FontSize="12" Padding="9,6" Margin="0,0,6,4" />
-          <Button Content="Cherry-pick…" Click="CherryPick_Click" FontSize="12" Padding="9,6" Margin="0,0,6,4" />
-          <Button x:Name="ContinueCherryButton" Content="{local:Loc 'Продолжить cherry-pick'}" Click="ContinueCherry_Click" FontSize="12" Padding="9,6" Margin="0,0,6,4" Visibility="Collapsed" />
-          <Button x:Name="AbortCherryButton" Content="{local:Loc 'Отменить cherry-pick'}" Click="AbortCherry_Click" FontSize="12" Padding="9,6" Margin="0,0,6,4" Visibility="Collapsed" />
-        </WrapPanel>
-        <DockPanel Grid.Row="3" Margin="0,0,0,9">
-          <Button x:Name="FileHistoryButton" Content="{local:Loc 'История файла'}" DockPanel.Dock="Right" Click="FileHistory_Click" FontSize="12" Padding="8,5" Margin="8,0,0,0" IsEnabled="False" />
-          <TextBox x:Name="FileTitle" Text="{local:Loc 'Выберите файл'}" Style="{StaticResource SelectableLabel}" Foreground="{DynamicResource MutedBrush}" FontSize="12" VerticalAlignment="Center" />
-        </DockPanel>
-        <local:DiffView x:Name="CommitDiff" Grid.Row="4" />
       </Grid>
     </Grid>
-    <TextBlock x:Name="OperationStatus" Grid.Row="2" Style="{StaticResource Caption}" Margin="0,8,0,0" TextWrapping="Wrap" MaxHeight="64" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+    <TextBlock x:Name="OperationStatus" Grid.Row="2" Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
   </Grid>
 </UserControl>

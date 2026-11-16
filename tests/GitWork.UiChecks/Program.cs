@@ -32,6 +32,13 @@ internal static class Program
             return;
         }
 
+        if (args.Length == 2 && args[0] == "--design-preview")
+        {
+            DesignPreview.Run(application, args[1]);
+            application.Shutdown();
+            return;
+        }
+
         if (args.Length == 3 && args[0] == "--showcase")
         {
             Showcase.Run(application, args[1], args[2]);
@@ -145,9 +152,9 @@ internal static class Program
             throw new InvalidOperationException("Возврат к тёмной теме должен восстанавливать цвета существующих элементов.");
         }
 
-        if (((Menu)window.FindName("MainMenu")).Items.Count != 2)
+        if (((Menu)window.FindName("MainMenu")).Items.Count != 4)
         {
-            throw new InvalidOperationException("Верхнее меню должно содержать только «Файл» и «Справка».");
+            throw new InvalidOperationException("Верхнее меню должно содержать «Файл», «Правка», «Вид» и «Справка».");
         }
 
         var branchDialog = new CreateBranchWindow(@"C:\repo", [new BranchInfo("main", "refs/heads/main", false, @"C:\other")], "main");
@@ -297,6 +304,19 @@ internal static class Program
             throw new InvalidOperationException("Предупреждение о бинарном файле не должно дублироваться в списке diff.");
         }
 
+        const string csharp = "var message = \"escaped \\\"quote\\\"\"; // комментарий";
+        view.FilePath = "example.cs";
+        view.ShowDiff(new FileDiff("", csharp, "+ " + csharp,
+            [new DiffLine(null, "", 1, csharp, DiffLineKind.Added)], false, null));
+        var highlighted = code.Document.Blocks.OfType<Paragraph>().Last().Inlines.OfType<Run>().ToArray();
+        if (!string.Concat(highlighted.Select(run => run.Text)).Contains(csharp, StringComparison.Ordinal)
+            || !highlighted.Any(run => run.Text == "\"escaped \\\"quote\\\"\"" && run.Foreground == view.FindResource("SyntaxStringBrush"))
+            || ((Run)view.FindName("AddedLinesText")).Text != "+1"
+            || ((Run)view.FindName("RemovedLinesText")).Text.Length != 0)
+        {
+            throw new InvalidOperationException("Подсветка C# должна сохранять экранированные строки и исходный текст, а статистика — показывать реальные изменения.");
+        }
+
         Program.AssertDarkBackground(view, true);
         Console.WriteLine("OK: выделение слоя, ровные колонки, unified-строки и навигация по блокам.");
         view.ShowDiff(new FileDiff("", "", "", [], false, "Бинарный файл"));
@@ -356,7 +376,7 @@ internal static class Program
         description.Text = "Описание";
         var excluded = files.Items.Cast<ChangeFileEntry>().Single(file => file.File.Path == "staged.cs");
         excluded.IsIncluded = false;
-        if (((TextBlock)window.FindName("CommitSelectionText")).Text != "Выбрано файлов: 2 из 3"
+        if (((TextBlock)window.FindName("CommitSelectionText")).Text != "Выбрано 2 из 3"
             || ((CheckBox)window.FindName("SelectAllBox")).IsChecked is not null
             || !((Button)window.FindName("CommitButton")).IsEnabled)
         {
@@ -379,7 +399,7 @@ internal static class Program
         }
 
         window.Close();
-        if (((TextBlock)window.FindName("CommitSelectionText")).Text != "Выбрано файлов: 2 из 3")
+        if (((TextBlock)window.FindName("CommitSelectionText")).Text != "Выбрано 2 из 3")
         {
             throw new InvalidOperationException("Поиск не должен менять состав коммита.");
         }
