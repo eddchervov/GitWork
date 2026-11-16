@@ -109,10 +109,11 @@ public sealed class FileHistoryService
         var previousPath = entry.PreviousPath is null ? null : FileHistoryService.NormalizeRelativePath(entry.PreviousPath);
         var paths = FileHistoryService.GetPathspecs(revisionPath, previousPath);
         string patch;
+        string? verifiedParent = null;
 
         if (entry.FirstParentHash is { } parent)
         {
-            var verifiedParent = await this.ResolveCommitAsync(worktree, parent);
+            verifiedParent = await this.ResolveCommitAsync(worktree, parent);
             patch = await this._git.RunLimitedAsync(worktree, FileHistoryService.MaximumPatchOutputLength + 1,
                 ["diff", "--no-ext-diff", "--no-textconv", "--find-renames", "--unified=3", verifiedParent, revision, "--", .. paths]);
         }
@@ -122,7 +123,22 @@ public sealed class FileHistoryService
                 ["diff-tree", "--root", "--no-commit-id", "--no-ext-diff", "--no-textconv", "--find-renames", "--unified=3", "-r", "-p", revision, "--", .. paths]);
         }
 
-        return GitChangeService.ParseUnifiedDiff(patch, patch.Length > FileHistoryService.MaximumPatchOutputLength);
+        var diff = GitChangeService.ParseUnifiedDiff(patch, patch.Length > FileHistoryService.MaximumPatchOutputLength);
+        if (!DiffContextLoader.CanLoad(diff))
+        {
+            return diff;
+        }
+
+        return diff with
+        {
+            LoadContextAsync = () => DiffContextLoader.ReadAsync(
+                this._git,
+                worktree,
+                verifiedParent,
+                previousPath ?? revisionPath,
+                revision,
+                revisionPath)
+        };
     }
 
     public async Task<FileDiff> GetWorkingDiffAsync(string worktree, string relativeFile, FileHistoryEntry entry, string? currentPath = null)
@@ -136,7 +152,32 @@ public sealed class FileHistoryService
         var patch = await this._git.RunLimitedAsync(worktree, FileHistoryService.MaximumPatchOutputLength + 1,
             ["diff", "--no-ext-diff", "--no-textconv", "--find-renames", "--unified=3", revision, "--", .. paths]);
 
-        return GitChangeService.ParseUnifiedDiff(patch, patch.Length > FileHistoryService.MaximumPatchOutputLength);
+        var diff = GitChangeService.ParseUnifiedDiff(patch, patch.Length > FileHistoryService.MaximumPatchOutputLength);
+        if (!DiffContextLoader.CanLoad(diff))
+        {
+            return diff;
+        }
+
+        return diff with
+        {
+            LoadContextAsync = async () =>
+            {
+                var context = await DiffContextLoader.ReadRevisionAndFileAsync(
+                    this._git,
+                    worktree,
+                    revision,
+                    revisionPath,
+                    worktree,
+                    normalizedCurrentPath);
+                var latest = await this.GetWorkingDiffAsync(worktree, relativeFile, entry, currentPath);
+                if (diff.IsBinary != latest.IsBinary || diff.UnifiedText != latest.UnifiedText)
+                {
+                    throw new GitException("Файл изменился. Обновите diff и повторите раскрытие контекста.");
+                }
+
+                return context;
+            }
+        };
     }
 
     private async Task<string> ResolveCommitAsync(string worktree, string hash)

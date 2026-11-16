@@ -22,7 +22,12 @@ public sealed record FileDiff(
     string UnifiedText,
     IReadOnlyList<DiffLine> Lines,
     bool IsBinary,
-    string? Message);
+    string? Message)
+{
+    public Func<Task<DiffContext>>? LoadContextAsync { get; init; }
+}
+
+public sealed record DiffContext(IReadOnlyList<string> OldLines, IReadOnlyList<string> NewLines);
 
 public sealed record CommitInfo(string ShortHash, string Subject, string Author, string Date);
 

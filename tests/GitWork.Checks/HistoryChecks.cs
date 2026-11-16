@@ -48,6 +48,18 @@ public static class HistoryChecks
             check(!snapshot.IsBinary && snapshot.Text.Length > 0, "Содержимое версии читается без изменения репозитория");
             var commitDiff = await history.GetCommitDiffAsync(clonePath, currentRevision);
             check(commitDiff.UnifiedText.Length > 0 || !string.IsNullOrWhiteSpace(commitDiff.Message), "Diff версии объясняет изменения или отсутствие текстового diff");
+            if (commitDiff.LoadContextAsync is not null)
+            {
+                var commitContext = await commitDiff.LoadContextAsync();
+                var snapshotLines = snapshot.Text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+                if (snapshotLines.Length > 1 && snapshotLines[^1].Length == 0)
+                {
+                    Array.Resize(ref snapshotLines, snapshotLines.Length - 1);
+                }
+
+                check(commitContext.NewLines.SequenceEqual(snapshotLines), "Контекст diff коммита совпадает с полным содержимым выбранной версии");
+            }
+
             var workingDiff = await history.GetWorkingDiffAsync(clonePath, selectedPath, currentRevision);
             check(workingDiff.UnifiedText.Length == 0 || workingDiff.Lines.Count > 0 || !string.IsNullOrWhiteSpace(workingDiff.Message),
                 "Сравнение с рабочим файлом остаётся ограниченным и понятным");
@@ -58,9 +70,11 @@ public static class HistoryChecks
             const string renameMarker = "History working rename check";
             await File.AppendAllTextAsync(renamedFullPath, Environment.NewLine + renameMarker);
             var renamedDiff = await history.GetWorkingDiffAsync(clonePath, selectedPath, currentRevision, renamedPath);
+            var renamedContext = renamedDiff.LoadContextAsync is null ? null : await renamedDiff.LoadContextAsync();
             check(!File.Exists(Path.Combine(clonePath, selectedPath.Replace('/', Path.DirectorySeparatorChar)))
                 && renamedDiff.UnifiedText.Contains(renameMarker, StringComparison.Ordinal)
-                && renamedDiff.Lines.Any(line => line.Kind == DiffLineKind.Added),
+                && renamedDiff.Lines.Any(line => line.Kind == DiffLineKind.Added)
+                && renamedContext?.NewLines.Contains(renameMarker) == true,
                 "Diff истории показывает staged rename и изменения по новому пути");
 
             var rootRevision = selectedEntries.LastOrDefault(entry => entry.FirstParentHash is null);
@@ -69,6 +83,12 @@ public static class HistoryChecks
                 var rootDiff = await history.GetCommitDiffAsync(clonePath, rootRevision);
                 check(rootDiff.Lines.Count > 0 || rootDiff.IsBinary || !string.IsNullOrWhiteSpace(rootDiff.Message),
                     "Первый коммит файла показывает добавленное содержимое");
+                if (rootDiff.LoadContextAsync is not null)
+                {
+                    var rootContext = await rootDiff.LoadContextAsync();
+                    check(rootContext.OldLines.Count == 0 && rootContext.NewLines.Count > 0,
+                        "Контекст первого коммита начинается с пустой версии файла");
+                }
             }
 
             var rename = selectedEntries.FirstOrDefault(entry => entry.PreviousPath is not null);

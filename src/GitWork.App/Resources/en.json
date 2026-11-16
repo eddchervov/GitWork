@@ -668,5 +668,21 @@
   "В окне показан конец вывода. Полный журнал сохранён в файле.": "The window shows recent output. The full log is saved to a file.",
   "Путь полного журнала": "Full log path",
   "Открыть журнал": "Open log",
-  "Не удалось открыть журнал.": "Could not open the log."
+  "Не удалось открыть журнал.": "Could not open the log.",
+  "20 строк": "20 lines",
+  "Все строки": "All lines",
+  "Скрыто строк: {0}": "Hidden lines: {0}",
+  "Неизменённые строки": "Unchanged lines",
+  "Показать следующие неизменённые строки": "Show next unchanged lines",
+  "Показать предыдущие неизменённые строки": "Show previous unchanged lines",
+  "Показать все строки этого промежутка": "Show all lines in this gap",
+  "Файл изменился. Обновите diff перед раскрытием строк.": "The file has changed. Refresh the diff before expanding lines.",
+  "Контекст файла не совпадает с diff. Обновите сравнение.": "File context does not match the diff. Refresh the comparison.",
+  "Файл изменился. Обновите diff и повторите раскрытие контекста.": "The file has changed. Refresh the diff and expand context again.",
+  "Файл слишком большой для раскрытия контекста.": "The file is too large to expand context.",
+  "Контекст бинарного файла нельзя показать как текст.": "Binary file context cannot be displayed as text.",
+  "Git вернул неверный путь к версии файла.": "Git returned an invalid path for the file revision.",
+  "Файл слишком большой или бинарный для раскрытия контекста.": "The file is too large or binary to expand context.",
+  "Кодировка файла не поддерживается для раскрытия контекста.": "The file encoding is not supported for context expansion.",
+  "В файле слишком много строк для раскрытия контекста.": "The file has too many lines to expand context."
 }

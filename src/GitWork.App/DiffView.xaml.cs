@@ -67,8 +67,16 @@ public partial class DiffView : UserControl
 
     public void ShowDiff(FileDiff diff)
     {
+        this.ResetContext(diff);
+        this.ShowDiffContent(diff);
+        _ = this.LoadContextBoundsAsync();
+    }
+
+    private void ShowDiffContent(FileDiff diff)
+    {
         this._patch = diff.UnifiedText;
         this._rawUnifiedHunks = this.BuildUnifiedLines(diff);
+        this.InsertUnifiedContext();
         this.UpdateDiffStats();
         this._unifiedHunks = this.UnifiedLines.Select((line, index) => (line, index))
             .Where(item => item.line.Kind == UnifiedDiffLineKind.Hunk)
@@ -84,7 +92,8 @@ public partial class DiffView : UserControl
         this.MessageBorder.Visibility = string.IsNullOrWhiteSpace(diff.Message) ? Visibility.Collapsed : Visibility.Visible;
         this.Lines.Clear();
 
-        foreach (var line in diff.Lines)
+        var displayLines = this.BuildContextLines(diff.Lines);
+        foreach (var line in displayLines)
         {
             this.Lines.Add(new DiffLineView(line));
         }
@@ -105,10 +114,9 @@ public partial class DiffView : UserControl
         }
 
         this._rowHunks = this._changeStarts
-            .Select(row => DiffView.FindUnifiedHunk(diff.Lines[row], this._rawUnifiedHunks, diff.UnifiedText))
+            .Select(row => DiffView.FindUnifiedHunk(displayLines[row], this._rawUnifiedHunks, diff.UnifiedText))
             .ToArray();
 
-        this._currentChange = -1;
         this.PrepareHighlighting();
         this.ApplyUnifiedMode();
         this.UpdateChangeControls();
@@ -387,8 +395,15 @@ public partial class DiffView : UserControl
         var document = new FlowDocument { PagePadding = new Thickness(0), FontFamily = this.CodeViewer.FontFamily, FontSize = this.CodeViewer.FontSize };
         if (this.IsUnified)
         {
-            foreach (var line in this.UnifiedLines)
+            for (var index = 0; index <= this.UnifiedLines.Count; index++)
             {
+                this.AppendUnifiedContextControl(document, index);
+                if (index == this.UnifiedLines.Count)
+                {
+                    break;
+                }
+
+                var line = this.UnifiedLines[index];
                 var paragraph = new Paragraph { Margin = new Thickness(0), Padding = new Thickness(8, 2, 8, 2) };
                 var gutter = new Run($"{line.OldNumber,5} {line.NewNumber,5} {line.Marker,1} ");
                 gutter.SetResourceReference(TextElement.ForegroundProperty, "MutedBrush");
@@ -417,8 +432,15 @@ public partial class DiffView : UserControl
             table.Columns.Add(new TableColumn());
             var group = new TableRowGroup();
             table.RowGroups.Add(group);
-            foreach (var line in this.Lines)
+            for (var index = 0; index <= this.Lines.Count; index++)
             {
+                this.AppendSplitContextControl(group, index);
+                if (index == this.Lines.Count)
+                {
+                    break;
+                }
+
+                var line = this.Lines[index];
                 var row = new TableRow();
                 var beforeParagraph = new Paragraph { Margin = new Thickness(0) };
                 beforeParagraph.Inlines.Add(new Run($"{line.OldNumber,5}  "));

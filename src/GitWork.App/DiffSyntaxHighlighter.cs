@@ -163,6 +163,16 @@ public static class DiffSyntaxHighlighter
             return "SyntaxPropertyBrush";
         }
 
+        if (parent is IdentifierNameSyntax identifierName
+            && identifierName.Parent is AssignmentExpressionSyntax assignment
+            && assignment.Left == identifierName
+            && assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
+            && token.ValueText.Length > 0
+            && char.IsUpper(token.ValueText[0]))
+        {
+            return "SyntaxPropertyBrush";
+        }
+
         if (parent.AncestorsAndSelf().OfType<MemberAccessExpressionSyntax>()
             .Any(memberAccess => memberAccess.Name.Span.Contains(token.Span)))
         {

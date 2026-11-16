@@ -127,7 +127,23 @@ internal static class InlineWorktreeUiChecks
                 File.SetAttributes(file, FileAttributes.Normal);
             }
 
-            Directory.Delete(root, true);
+            InlineWorktreeUiChecks.RunAsync(async () =>
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+                while (true)
+                {
+                    try
+                    {
+                        Directory.Delete(root, true);
+                        return;
+                    }
+                    catch (IOException exception) when ((exception.HResult & 0xFFFF) is 32 or 33 && DateTime.UtcNow < deadline)
+                    {
+                        // Фоновое чтение Git может ещё удерживать рабочую папку после закрытия окна.
+                        await Task.Delay(50);
+                    }
+                }
+            });
         }
     }
 

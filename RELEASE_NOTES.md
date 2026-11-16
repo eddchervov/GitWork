@@ -1,8 +1,7 @@
-# Git Work 0.3.3
+# Git Work 0.3.4
 
-- Add C# syntax colors for keywords, types, methods, properties, strings, comments, numbers and directives.
-- Highlight the changed fragments inside modified lines in unified and side-by-side diffs while preserving selectable code text.
-- Keep old and new syntax state separate and reset it across gaps between diff hunks.
-- Pass the selected file path directly to diff viewers in Changes, commit history, file history and branch comparison.
-- Bound per-line comparison work and preserve Unicode text element boundaries when highlighting changes.
-- Keep Git Work's own dark and light theme palettes, with stronger backgrounds only on edited fragments.
+- Expand unchanged lines above, between and below diff blocks with arrow controls: 20 lines at a time or all lines in a gap.
+- Use the same context controls in Changes, commit history, file history and branch comparison, in unified and side-by-side layouts.
+- Read context from the exact compared revisions and reject stale working-copy context instead of mixing file versions.
+- Preserve the original diff and hunk identities when expanding context, including staging and copying patches.
+- Correct C# property colors in partial object-initializer fragments such as branch comparison diffs.

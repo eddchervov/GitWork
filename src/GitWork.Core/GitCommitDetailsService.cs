@@ -31,7 +31,25 @@ public sealed class GitCommitDetailsService(GitService git)
             : new[] { "show", "--format=", "--root", "--no-ext-diff", "--no-textconv", "--find-renames", "--unified=3", revision, "--" };
         var patch = await this._git.RunLimitedAsync(worktree, 500_001, [.. arguments, .. paths]);
 
-        return GitChangeService.ParseUnifiedDiff(patch, patch.Length > 500_000);
+        var diff = GitChangeService.ParseUnifiedDiff(patch, patch.Length > 500_000);
+        if (!DiffContextLoader.CanLoad(diff))
+        {
+            return diff;
+        }
+
+        var parent = parents.Length > 1 ? parents[1] : null;
+        var oldPath = file.OriginalPath ?? file.Path;
+
+        return diff with
+        {
+            LoadContextAsync = () => DiffContextLoader.ReadAsync(
+                this._git,
+                worktree,
+                parent,
+                oldPath,
+                revision,
+                file.Path)
+        };
     }
 
     private async Task<string> ResolveAsync(string worktree, string hash)

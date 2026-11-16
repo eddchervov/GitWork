@@ -1,3 +1,4 @@
+using System.Text;
 using GitWork.Checks;
 using GitWork.Core;
 
@@ -230,12 +231,35 @@ try
         Check(workingDiff.Lines.Any(line => line.Kind == DiffLineKind.Modified && line.OldText == "Первая строка." && line.NewText == "Изменённая строка.")
             && workingDiff.Lines.Any(line => line.Kind == DiffLineKind.Added && line.NewText == "Вторая строка.")
             && workingDiff.Lines.All(line => line.Kind != DiffLineKind.Added || line.NewText != "Первая строка."), "Просмотр изменений после индексации отдельно");
+        var stagedContext = await stagedDiff.LoadContextAsync!();
+        var workingContext = await workingDiff.LoadContextAsync!();
+        Check(stagedContext.OldLines.Count == 0 && stagedContext.NewLines.SequenceEqual(["Первая строка."]),
+            "Контекст staged diff читается из индекса");
+        Check(workingContext.OldLines.SequenceEqual(["Первая строка."])
+            && workingContext.NewLines.SequenceEqual(["Изменённая строка.", "Вторая строка."]),
+            "Контекст unstaged diff читается из индекса и рабочего файла");
+        File.WriteAllText(previewPath, "Новая первая строка.\nВторая строка.\n");
+        var staleContextRejected = false;
+        try
+        {
+            await workingDiff.LoadContextAsync!();
+        }
+        catch (GitException)
+        {
+            staleContextRejected = true;
+        }
+
+        Check(staleContextRejected, "Раскрытие контекста отклоняет устаревший diff");
+        File.WriteAllText(previewPath, "Изменённая строка.\nВторая строка.\n");
         var stagedOnlyDiff = await changeService.GetRevisionAsync(worktreePath, untracked, ChangeScope.Staged);
         Check(stagedOnlyDiff.Lines[0].Kind == DiffLineKind.Added, "Выравнивание добавленных строк для двухпанельного diff");
         File.Delete(previewPath);
         var deletedDiff = await changeService.GetRevisionAsync(worktreePath, untracked, ChangeScope.WorkingTree);
         Check(deletedDiff.Lines.Count == 1 && deletedDiff.Lines[0].Kind == DiffLineKind.Removed
             && deletedDiff.Lines[0].OldText == "Первая строка.", "Просмотр удаления содержимого из рабочего дерева");
+        var deletedContext = await deletedDiff.LoadContextAsync!();
+        Check(deletedContext.OldLines.SequenceEqual(["Первая строка."]) && deletedContext.NewLines.Count == 0,
+            "Контекст удаления включает старую версию и пустую новую");
         await git.RunAsync(worktreePath, "rm", "--cached", "--", "preview.txt");
         var binaryPath = Path.Combine(worktreePath, "binary.dat");
         await File.WriteAllBytesAsync(binaryPath, [0, 1, 2, 3]);
@@ -254,6 +278,14 @@ try
         Check(replacementDiff.Lines.Any(line => line.NewText == "Символ: \uFFFD"), "Допустимый символ замены в UTF-8 не скрывает diff");
         await git.RunAsync(worktreePath, "rm", "--cached", "--", "replacement.txt");
         File.Delete(replacementPath);
+        var bomPath = Path.Combine(worktreePath, "bom.txt");
+        await File.WriteAllBytesAsync(bomPath, [.. new UTF8Encoding(true).GetPreamble(), .. Encoding.UTF8.GetBytes("Первая строка.\n")]);
+        await git.RunAsync(worktreePath, "add", "--", "bom.txt");
+        var bomDiff = await changeService.GetRevisionAsync(worktreePath, new ChangedFile("A ", "bom.txt", null), ChangeScope.Staged);
+        var bomContext = await bomDiff.LoadContextAsync!();
+        Check(bomContext.NewLines[0].StartsWith('\uFEFF'), "Контекст сохранённого UTF-8 BOM совпадает с diff");
+        await git.RunAsync(worktreePath, "rm", "--cached", "--", "bom.txt");
+        File.Delete(bomPath);
         var emptyPath = Path.Combine(worktreePath, "empty.txt");
         await File.WriteAllBytesAsync(emptyPath, []);
         var emptyDiff = await changeService.GetRevisionAsync(worktreePath, new ChangedFile("??", "empty.txt", null), ChangeScope.WorkingTree);
@@ -264,6 +296,12 @@ try
         var largeDiff = await changeService.GetRevisionAsync(worktreePath, new ChangedFile("??", "large.txt", null), ChangeScope.Staged);
         Check(largeDiff.Message == "Diff обрезан: достигнут предел предпросмотра." && largeDiff.UnifiedText.Length <= 500_000 + 40,
             "Ограничение большого staged diff с явным сообщением");
+        Check(largeDiff.LoadContextAsync is null, "Обрезанный diff не предлагает раскрытие контекста");
+        await File.WriteAllTextAsync(largePath, "\uFFFD" + new string('x', 600_000));
+        await git.RunAsync(worktreePath, "add", "--", "large.txt");
+        var warnedLargeDiff = await changeService.GetRevisionAsync(worktreePath, new ChangedFile("A ", "large.txt", null), ChangeScope.Staged);
+        Check(warnedLargeDiff.Message?.Contains("Diff обрезан:", StringComparison.Ordinal) == true && warnedLargeDiff.LoadContextAsync is null,
+            "Предупреждение кодировки не включает раскрытие обрезанного diff");
         await git.RunAsync(worktreePath, "rm", "--cached", "--", "large.txt");
         File.Delete(largePath);
         var rejectedTraversal = false;
@@ -298,6 +336,14 @@ try
             Check(rename.OriginalPath == renameSource && rename.Path == renameTarget
                 && renameDiff.UnifiedText.Contains("rename from", StringComparison.Ordinal)
                 && renameDiff.Lines.Any(line => line.Kind == DiffLineKind.Added), "Просмотр staged-переименования с изменением");
+            await File.AppendAllTextAsync(targetPath, "Незаписанная строка после переименования.\n");
+            var workingRename = (await git.GetStatusAsync(worktreePath)).First(file => file.OriginalPath is not null);
+            var workingRenameDiff = await changeService.GetRevisionAsync(worktreePath, workingRename, ChangeScope.WorkingTree);
+            var workingRenameContext = await workingRenameDiff.LoadContextAsync!();
+            Check(workingRename.OriginalPath == renameSource
+                && workingRenameContext.OldLines.Contains("Проверка переименования.")
+                && workingRenameContext.NewLines.Contains("Незаписанная строка после переименования."),
+                "Контекст незаписанного изменения после индексированного переименования использует новый путь индекса");
             await File.WriteAllBytesAsync(targetPath, originalBytes);
             await git.RunAsync(worktreePath, "mv", "--", renameTarget, renameSource);
             await git.RunAsync(worktreePath, "add", "-A");

@@ -46,7 +46,25 @@ public sealed class GitChangeService
         arguments.AddRange(GitChangeService.GetPathspecs(file));
         var patch = await this._git.RunLimitedAsync(worktree, MaximumPatchLength + 1, [.. arguments]);
 
-        return GitChangeService.ParsePatch(GitChangeService.Limit(patch), patch.Length > MaximumPatchLength);
+        var diff = GitChangeService.ParsePatch(GitChangeService.Limit(patch), patch.Length > MaximumPatchLength);
+        if (!DiffContextLoader.CanLoad(diff))
+        {
+            return diff;
+        }
+
+        return diff with
+        {
+            LoadContextAsync = async () =>
+            {
+                var context = scope == ChangeScope.Staged
+                    ? await DiffContextLoader.ReadHeadAndIndexAsync(this._git, worktree, file.OriginalPath ?? file.Path, file.Path)
+                    : await DiffContextLoader.ReadIndexAndFileAsync(this._git, worktree, file.Path, file.Path);
+                var latest = await this.GetRevisionAsync(worktree, file, scope);
+                GitChangeService.EnsureContextMatches(diff, latest);
+
+                return context;
+            }
+        };
     }
 
     public async Task<FileDiff> GetWorkingRevisionAsync(string worktree, ChangedFile file)
@@ -72,7 +90,27 @@ public sealed class GitChangeService
         var patch = await this._git.RunLimitedAsync(worktree, MaximumPatchLength + 1,
             ["diff", "--no-ext-diff", "--no-textconv", "--find-renames", "--unified=3", "HEAD", "--", .. paths]);
 
-        return GitChangeService.ParsePatch(GitChangeService.Limit(patch), patch.Length > MaximumPatchLength);
+        var diff = GitChangeService.ParsePatch(GitChangeService.Limit(patch), patch.Length > MaximumPatchLength);
+        if (!DiffContextLoader.CanLoad(diff))
+        {
+            return diff;
+        }
+
+        return diff with
+        {
+            LoadContextAsync = async () =>
+            {
+                var oldPath = file.OriginalPath ?? file.Path;
+                var head = await DiffContextLoader.ResolveHeadAsync(this._git, worktree);
+                var context = head is null
+                    ? new DiffContext([], GitChangeService.SplitLines(await DiffContextLoader.ReadFileAsync(worktree, file.Path)))
+                    : await DiffContextLoader.ReadRevisionAndFileAsync(this._git, worktree, head, oldPath, worktree, file.Path);
+                var latest = await this.GetWorkingRevisionAsync(worktree, file);
+                GitChangeService.EnsureContextMatches(diff, latest);
+
+                return context;
+            }
+        };
     }
 
     public async Task<BranchComparison> CompareBranchesAsync(string repository, string baseRef, string targetRef, BranchComparisonMode mode = BranchComparisonMode.BranchChanges)
@@ -117,7 +155,22 @@ public sealed class GitChangeService
         var patch = await this._git.RunLimitedAsync(repository, MaximumPatchLength + 1,
             ["diff", "--no-ext-diff", "--no-textconv", "--find-renames", "--unified=3", comparison.DiffBaseHash, comparison.TargetHash, "--", .. paths]);
 
-        return GitChangeService.ParsePatch(GitChangeService.Limit(patch), patch.Length > MaximumPatchLength);
+        var diff = GitChangeService.ParsePatch(GitChangeService.Limit(patch), patch.Length > MaximumPatchLength);
+        if (!DiffContextLoader.CanLoad(diff))
+        {
+            return diff;
+        }
+
+        return diff with
+        {
+            LoadContextAsync = () => DiffContextLoader.ReadAsync(
+                this._git,
+                repository,
+                comparison.DiffBaseHash,
+                file.OriginalPath ?? file.Path,
+                comparison.TargetHash,
+                file.Path)
+        };
     }
 
     private async Task<string> ResolveCommitAsync(string repository, string reference)
@@ -165,6 +218,14 @@ public sealed class GitChangeService
     {
         var paths = file.OriginalPath is null ? [file.Path] : new[] { file.OriginalPath, file.Path };
         return paths.Select(path => ":(literal)" + path).ToArray();
+    }
+
+    private static void EnsureContextMatches(FileDiff original, FileDiff latest)
+    {
+        if (original.IsBinary != latest.IsBinary || original.UnifiedText != latest.UnifiedText)
+        {
+            throw new GitException("Файл изменился. Обновите diff и повторите раскрытие контекста.");
+        }
     }
 
     private async Task<FileDiff> ReadUntrackedAsync(string worktree, string relativePath)

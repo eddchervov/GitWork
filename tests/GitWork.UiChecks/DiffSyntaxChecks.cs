@@ -37,6 +37,53 @@ internal static class DiffSyntaxChecks
             throw new InvalidOperationException("Подсветка C# должна распознавать директивы, типы, методы, свойства, строки, комментарии, числа и ключевые слова.");
         }
 
+        var partialInitializerLines = new[]
+        {
+            "BucketName = _bucketName,",
+            "Key = path,",
+            "Expires = DateTime.UtcNow.Add(expiration),",
+            "Protocol = new Uri(this._serviceUrl).Scheme == Uri.UriSchemeHttp ? Protocol.HTTP : Protocol.HTTPS,",
+            "Verb = HttpVerb.GET"
+        };
+        var partialInitializerSpans = DiffSyntaxHighlighter.Highlight("Partial.cs", partialInitializerLines);
+        var expectedProperties = new[] { "BucketName", "Key", "Expires", "Protocol", "Verb" };
+        for (var lineIndex = 0; lineIndex < expectedProperties.Length; lineIndex++)
+        {
+            var propertyName = expectedProperties[lineIndex];
+            if (!partialInitializerSpans[lineIndex].Any(span => partialInitializerLines[lineIndex].Substring(span.Start, span.Length) == propertyName
+                && span.ResourceKey == "SyntaxPropertyBrush"))
+            {
+                throw new InvalidOperationException($"Свойство {propertyName} должно распознаваться в частичном фрагменте инициализатора.");
+            }
+        }
+
+        if (!partialInitializerSpans[2].Any(span => partialInitializerLines[2].Substring(span.Start, span.Length) == "DateTime"
+                && span.ResourceKey == "SyntaxTypeBrush")
+            || !partialInitializerSpans[2].Any(span => partialInitializerLines[2].Substring(span.Start, span.Length) == "Add"
+                && span.ResourceKey == "SyntaxMethodBrush")
+            || !partialInitializerSpans[3].Any(span => partialInitializerLines[3].Substring(span.Start, span.Length) == "Uri"
+                && span.ResourceKey == "SyntaxTypeBrush"))
+        {
+            throw new InvalidOperationException("Типы и вызовы методов должны сохранять свои цвета в частичном инициализаторе.");
+        }
+
+        var fullInitializerLines = new[]
+        {
+            "var request = new Request",
+            "{",
+            "    BucketName = bucketName,",
+            "    Verb = HttpVerb.GET",
+            "};"
+        };
+        var fullInitializerSpans = DiffSyntaxHighlighter.Highlight("Full.cs", fullInitializerLines);
+        if (!fullInitializerSpans[2].Any(span => fullInitializerLines[2].Substring(span.Start, span.Length) == "BucketName"
+                && span.ResourceKey == "SyntaxPropertyBrush")
+            || !fullInitializerSpans[3].Any(span => fullInitializerLines[3].Substring(span.Start, span.Length) == "HttpVerb"
+                && span.ResourceKey == "SyntaxTypeBrush"))
+        {
+            throw new InvalidOperationException("Инициализатор с полным контекстом должен отличать свойства от типов.");
+        }
+
         if (!spans[5].Any(span => span.Start == 0 && span.Length == lines[5].Length && span.ResourceKey == "SyntaxStringBrush")
             || spans[^1].Any(span => lines[^1].Substring(span.Start, span.Length) is "client" or "result"
                 && span.ResourceKey is "SyntaxMethodBrush" or "SyntaxTypeBrush")

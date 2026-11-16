@@ -29,6 +29,14 @@ internal static class Program
         {
             DiffSyntaxChecks.Run();
             DiffRenderingChecks.Run();
+            DiffContextChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Length == 2 && args[0] == "--diff-context-preview")
+        {
+            DiffContextChecks.RunPreview(application, args[1]);
             application.Shutdown();
             return;
         }
@@ -109,6 +117,7 @@ internal static class Program
         Program.CheckDiffView();
         DiffSyntaxChecks.Run();
         DiffRenderingChecks.Run();
+        DiffContextChecks.Run();
         UsabilityChecks.Run();
         DailyChecks.Run();
         GraphUiChecks.Run();
