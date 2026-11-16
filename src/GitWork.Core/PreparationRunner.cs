@@ -8,6 +8,7 @@ namespace GitWork.Core;
 public sealed class PreparationRunner
 {
     private const int MaximumOutputCharacters = 256 * 1024;
+    private const string TruncatedOutputMarker = "Начало вывода обрезано: сохранён только конец.";
     private static readonly Regex s_variableNameRegex = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
     public async Task<PreparationRunResult> RunAsync(
@@ -323,23 +324,50 @@ public sealed class PreparationRunner
         IProgress<PreparationOutput>? progress)
     {
         var value = PreparationRunner.Redact(line.ToString(), secrets);
+        progress?.Report(new PreparationOutput(stepIndex, value, isError));
+
         lock (output)
         {
-            var remaining = PreparationRunner.MaximumOutputCharacters - output.Length;
-            if (remaining <= 0)
+            var lineEnding = Environment.NewLine;
+            var entryLength = value.Length + lineEnding.Length;
+            if (entryLength + PreparationRunner.TruncatedOutputMarker.Length + lineEnding.Length > PreparationRunner.MaximumOutputCharacters)
             {
+                output.Clear();
                 return;
             }
 
-            if (value.Length > remaining)
+            var marker = PreparationRunner.TruncatedOutputMarker + lineEnding;
+            var needsMarker = output.Length + entryLength > PreparationRunner.MaximumOutputCharacters;
+            if (output.Length > 0 && output.ToString().StartsWith(marker, StringComparison.Ordinal))
             {
-                value = value[..remaining];
+                output.Remove(0, marker.Length);
+                needsMarker = true;
             }
 
-            output.AppendLine(value);
-        }
+            while (output.Length + entryLength + (needsMarker ? marker.Length : 0) > PreparationRunner.MaximumOutputCharacters)
+            {
+                var lineEnd = 0;
+                while (lineEnd < output.Length && output[lineEnd] != '\n')
+                {
+                    lineEnd++;
+                }
 
-        progress?.Report(new PreparationOutput(stepIndex, value, isError));
+                if (lineEnd < output.Length)
+                {
+                    lineEnd++;
+                }
+
+                output.Remove(0, lineEnd);
+                needsMarker = true;
+            }
+
+            if (needsMarker)
+            {
+                output.Insert(0, marker);
+            }
+
+            output.Append(value).Append(lineEnding);
+        }
     }
 
     private static string Redact(string value, IReadOnlyList<string> secrets)

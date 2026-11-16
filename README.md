@@ -7,12 +7,12 @@ A focused Git client. A home for your worktrees.
 
 **English** · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-0.3.1-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.3.2-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
 </div>
 
 Git Work brings everyday Git and multi-repository workspaces into one Windows app. Review changes, follow history, and keep parallel tasks in separate worktrees without losing track of their folders or branches.
 
-The current stable release is **0.3.1**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
+The current stable release is **0.3.2**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
 
 ![Review changes in the dark theme](docs/images/changes-dark.png)
 
@@ -65,7 +65,7 @@ Online\Files\Configs\install.cmd "Online\Files\Configs\development.7z" debug oth
 
 Set `CONFIG_PASSWORD` as a secret profile variable. Secrets are encrypted for the current Windows user and passed as environment variables: `%NAME%` in CMD or `$env:NAME` in PowerShell. Existing Windows environment variables are inherited. Working directories must stay inside the new worktree or bundle. Commands run without an interactive console; use non-interactive scripts.
 
-The preparation window shows step results and a selectable, exportable log. Secret values are masked; lines longer than 8192 characters are hidden. A failed or stopped preparation keeps the created worktrees. Retry resumes from the failed step and skips steps that already succeeded. Run preparation again from a worktree's **⋯** menu, bundle settings, or **File → Run preparation…**.
+The preparation window shows step results and a selectable log. A full journal is saved automatically under `%LocalAppData%\GitWork\logs\preparation`, including attempt headers, stdout/stderr, step results and exit codes. Open it directly or export it with **Save log…**. The window keeps only recent output so large builds stay usable; exporting always copies the full journal. Secret values are masked; lines longer than 8192 characters are hidden. A failed or stopped preparation keeps the created worktrees. Retry resumes from the failed step and skips steps that already succeeded. Run preparation again from a worktree's **⋯** menu, bundle settings, or **File → Run preparation…**.
 
 ![Edit a saved preparation profile](docs/images/preparation-profile.png)
 
@@ -101,7 +101,7 @@ dotnet run --project tests/GitWork.UiChecks/GitWork.UiChecks.csproj
 Build the self-contained installer and update feed:
 
 ~~~powershell
-./tools/Build-Release.ps1 -Version 0.3.1
+./tools/Build-Release.ps1 -Version 0.3.2
 ~~~
 
 See [Releasing](docs/RELEASING.md) for the draft-release workflow and the files that must be published together. Building does not publish anything.

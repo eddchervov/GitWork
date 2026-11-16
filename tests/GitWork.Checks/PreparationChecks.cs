@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using GitWork.Core;
 
@@ -16,6 +17,7 @@ internal static class PreparationChecks
             await PreparationChecks.CheckSequentialStepsAsync(root, nested, check);
             await PreparationChecks.CheckShellEnvironmentAsync(root, check);
             await PreparationChecks.CheckLongSecretOutputAsync(root, check);
+            await PreparationChecks.CheckLargeOutputTailAsync(root, check);
             await PreparationChecks.CheckFailureHandlingAsync(root, check);
             await PreparationChecks.CheckCancellationAsync(root, check);
             PreparationChecks.CheckSerialization(check);
@@ -105,6 +107,31 @@ internal static class PreparationChecks
             && !output.Contains("boundary", StringComparison.Ordinal) && output.Contains("8192", StringComparison.Ordinal)
             && output.Contains("••••••••", StringComparison.Ordinal),
             "Длинные строки stdout и stderr не раскрывают части секрета на границе буфера");
+    }
+
+    private static async Task CheckLargeOutputTailAsync(string root, Action<bool, string> check)
+    {
+        const string secret = "preparation-large-output-secret";
+        var events = new ConcurrentQueue<PreparationOutput>();
+        var result = await new PreparationRunner().RunAsync(new PreparationProfile
+        {
+            Variables = [new PreparationVariable { Name = "TOKEN", IsSecret = true }],
+            Steps = [new PreparationStep
+            {
+                Name = "Большой вывод",
+                Shell = "PowerShell",
+                Command = "[Console]::Out.WriteLine($env:TOKEN); for ($i = 0; $i -lt 1100; $i++) { [Console]::Out.WriteLine(('x' * 1000)) }; [Console]::Error.WriteLine('FINAL_ERROR_SENTINEL:' + $env:TOKEN); exit 7"
+            }]
+        }, root, new Dictionary<string, string> { ["TOKEN"] = secret }, new InlineProgress<PreparationOutput>(events.Enqueue));
+        var step = result.Steps.Single();
+        var allProgress = string.Join("\n", events.Select(item => item.Text));
+
+        check(!result.Success && step.ExitCode == 7, "Команда с большим выводом сохраняет ненулевой код завершения");
+        check(allProgress.Contains("FINAL_ERROR_SENTINEL", StringComparison.Ordinal), "Журнал прогресса включает последнюю ошибку после большого вывода");
+        check(!allProgress.Contains(secret, StringComparison.Ordinal), "Журнал прогресса маскирует секрет после большого вывода");
+        check(events.First(item => !item.IsError && item.Text.Length > 0).Text == "••••••••", "Журнал прогресса маскирует секрет в первой строке stdout");
+        check(step.Output.Length <= 256 * 1024 + 128 && step.Output.Contains("FINAL_ERROR_SENTINEL", StringComparison.Ordinal),
+            "Результат шага хранит ограниченный хвост вывода с последней ошибкой");
     }
 
     private static async Task CheckFailureHandlingAsync(string root, Action<bool, string> check)

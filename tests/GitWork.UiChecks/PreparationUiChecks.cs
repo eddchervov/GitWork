@@ -84,6 +84,7 @@ internal static class PreparationUiChecks
             PreparationUiChecks.CheckSettingsAndSelection(root);
             PreparationUiChecks.CheckCreationForms(root);
             PreparationUiChecks.CheckPreparationRunAsync(root);
+            PreparationUiChecks.CheckFullJournal(root);
         }
         finally
         {
@@ -324,6 +325,16 @@ internal static class PreparationUiChecks
                 throw new InvalidOperationException("Повтор должен начать с ошибочного шага, пропустить успешный и продолжить профиль.");
             }
 
+            var retryLog = Path.Combine(runRoot, "retry-log.txt");
+            typeof(PreparationRunWindow).GetMethod("ExportLog", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [retryLog]);
+            var attempts = File.ReadAllText(retryLog);
+            if (!attempts.Contains("Попытка: 1", StringComparison.Ordinal) || !attempts.Contains("Попытка: 2", StringComparison.Ordinal)
+                || !attempts.Contains("код завершения: 1", StringComparison.Ordinal) || !attempts.Contains("код завершения: 0", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Повтор должен дополнять полный журнал, сохраняя результаты обеих попыток.");
+            }
+
             window.Close();
 
             var cancellation = new PreparationRunWindow(new PreparationProfile
@@ -341,6 +352,51 @@ internal static class PreparationUiChecks
             }
 
             cancellation.Close();
+        });
+    }
+
+    private static void CheckFullJournal(string root)
+    {
+        var runRoot = Path.Combine(root, "full-journal");
+        Directory.CreateDirectory(runRoot);
+        const string secret = "journal-secret-value";
+        var profile = new PreparationProfile
+        {
+            Name = "Полный журнал",
+            Variables = [new PreparationVariable { Name = "TOKEN", Value = PreparationSecrets.Protect(secret), IsSecret = true }],
+            Steps = [new PreparationStep
+            {
+                Name = "Большой вывод",
+                Shell = "PowerShell",
+                Command = "[Console]::Out.WriteLine('BEGIN_LOG_SENTINEL'); for ($i=0; $i -lt 900; $i++) { [Console]::Out.WriteLine(('x' * 1500) + $i) }; [Console]::Out.WriteLine($env:TOKEN); [Console]::Error.WriteLine('END_ERROR_SENTINEL'); exit 17"
+            }]
+        };
+        var window = new PreparationRunWindow(profile, runRoot);
+        InlineWorktreeUiChecks.RunAsync(async () =>
+        {
+            window.Show();
+            await PreparationUiChecks.WaitUntilAsync(() => !window.IsRunning && window.Result is not null);
+            var exportPath = Path.Combine(runRoot, "export.txt");
+            typeof(PreparationRunWindow).GetMethod("ExportLog", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [exportPath]);
+            var exported = File.ReadAllText(exportPath);
+            if (window.Result?.FailedStepIndex != 0 || exported.Length < 1024 * 1024
+                || !exported.Contains("BEGIN_LOG_SENTINEL", StringComparison.Ordinal)
+                || !exported.Contains("END_ERROR_SENTINEL", StringComparison.Ordinal)
+                || !exported.Contains("код завершения: 17", StringComparison.Ordinal)
+                || exported.Contains(secret, StringComparison.Ordinal)
+                || ((TextBox)window.FindName("OutputBox")).Text.Length > 1100 * 1024
+                || ((TextBlock)window.FindName("DisplayLimitHint")).Visibility != Visibility.Visible)
+            {
+                throw new InvalidOperationException("Полный журнал должен сохранять начало, конечную ошибку и код выхода большого вывода без раскрытия секретов, независимо от ограничения окна.");
+            }
+
+            var logPath = window.LogPath!;
+            window.Close();
+            if (!File.Exists(logPath) || !File.ReadAllText(logPath).Contains("END_ERROR_SENTINEL", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Автоматический журнал должен оставаться доступным после закрытия окна.");
+            }
         });
     }
 

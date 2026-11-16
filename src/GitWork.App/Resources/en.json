@@ -662,5 +662,11 @@
   "Секрет": "Secret",
   "Секретное значение (шифруется для текущего пользователя Windows)": "Secret value (encrypted for the current Windows user)",
   "Удалить": "Delete",
-  "Одна команда на шаг. Для нескольких CMD-скриптов добавьте отдельные шаги.": "One command per step. Add separate steps for multiple CMD scripts."
+  "Одна команда на шаг. Для нескольких CMD-скриптов добавьте отдельные шаги.": "One command per step. Add separate steps for multiple CMD scripts.",
+  "Не удалось записать полный журнал. Проверьте доступ к папке журналов и свободное место.": "Could not write the full log. Check access to the log folder and available disk space.",
+  "Результат шага {0}: {1}; код завершения: {2}": "Step {0}: {1}; exit code: {2}",
+  "В окне показан конец вывода. Полный журнал сохранён в файле.": "The window shows recent output. The full log is saved to a file.",
+  "Путь полного журнала": "Full log path",
+  "Открыть журнал": "Open log",
+  "Не удалось открыть журнал.": "Could not open the log."
 }

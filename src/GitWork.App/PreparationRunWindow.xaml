@@ -11,10 +11,16 @@
     </ItemsControl>
     <TextBlock x:Name="StatusText" Grid.Row="2" Text="{local:Loc 'Подготовка к запуску…'}" Margin="0,12,0,8" />
     <TextBox x:Name="OutputBox" Grid.Row="3" IsReadOnly="True" VerticalContentAlignment="Top" FontFamily="Consolas" FontSize="12" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AutomationProperties.Name="{local:Loc 'Вывод команд подготовки'}" />
-    <StackPanel Grid.Row="4" Margin="0,10,0,0"><ProgressBar x:Name="Progress" Height="3" IsIndeterminate="True" /><TextBlock Text="{local:Loc 'Рабочие копии сохранены. Ошибка или остановка подготовки не удаляет worktree.'}" Style="{StaticResource Caption}" Margin="0,8,0,0" /></StackPanel>
+    <StackPanel Grid.Row="4" Margin="0,10,0,0">
+      <ProgressBar x:Name="Progress" Height="3" IsIndeterminate="True" />
+      <TextBlock x:Name="DisplayLimitHint" Text="{local:Loc 'В окне показан конец вывода. Полный журнал сохранён в файле.'}" Style="{StaticResource Caption}" Visibility="Collapsed" Margin="0,6,0,0" />
+      <TextBox x:Name="LogPathText" Style="{StaticResource SelectableText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,6,0,0" AutomationProperties.Name="{local:Loc 'Путь полного журнала'}" />
+      <TextBlock Text="{local:Loc 'Рабочие копии сохранены. Ошибка или остановка подготовки не удаляет worktree.'}" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+    </StackPanel>
     <DockPanel Grid.Row="5" LastChildFill="False" Margin="0,16,0,0">
       <Button Content="{local:Loc 'Открыть папку'}" Click="OpenFolder_Click" DockPanel.Dock="Left" Margin="0,0,8,0" />
-      <Button x:Name="SaveLogButton" Content="{local:Loc 'Сохранить журнал…'}" Click="SaveLog_Click" DockPanel.Dock="Left" />
+      <Button x:Name="SaveLogButton" Content="{local:Loc 'Сохранить журнал…'}" Click="SaveLog_Click" DockPanel.Dock="Left" IsEnabled="False" />
+      <Button x:Name="OpenLogButton" Content="{local:Loc 'Открыть журнал'}" Click="OpenLog_Click" DockPanel.Dock="Left" Margin="8,0,0,0" IsEnabled="False" />
       <Button x:Name="RetryButton" Content="{local:Loc 'Повторить шаг'}" Click="Retry_Click" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Visibility="Collapsed" Margin="8,0,0,0" />
       <Button x:Name="CloseButton" Content="{local:Loc 'Остановить'}" Click="Close_Click" DockPanel.Dock="Right" />
     </DockPanel>

@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
@@ -17,6 +16,7 @@ public partial class PreparationRunWindow : Window
     private readonly string _root;
     private readonly PreparationRunRow[] _rows;
     private CancellationTokenSource? _cancellation;
+    private PreparationJournal? _journal;
     private int _retryIndex;
     private int _runVersion;
     private bool _isRunning;
@@ -32,11 +32,14 @@ public partial class PreparationRunWindow : Window
         this.ProfileTitle.Text = profile.Name;
         this.RootPathText.Text = this._root;
         this.SourceInitialized += (_, _) => WindowAppearance.ApplyTheme(this);
+        this.Closed += this.Window_Closed;
     }
 
     public bool IsRunning => this._isRunning;
 
     public PreparationRunResult? Result { get; private set; }
+
+    public string? LogPath => this._journal?.FilePath;
 
     private async void Window_Loaded(object sender, RoutedEventArgs e) => await this.RunAsync();
 
@@ -56,6 +59,11 @@ public partial class PreparationRunWindow : Window
         this._cancellation = new CancellationTokenSource();
         try
         {
+            this._journal ??= new PreparationJournal();
+            this._journal.Begin(this._profile, this._root, this._retryIndex);
+            this.LogPathText.Text = this._journal.FilePath;
+            this.OpenLogButton.IsEnabled = true;
+            this.SaveLogButton.IsEnabled = true;
             var profile = JsonSerializer.Deserialize<PreparationProfile>(JsonSerializer.Serialize(this._profile))!;
             for (var index = this._retryIndex; index < profile.Steps.Count; index++)
             {
@@ -73,18 +81,32 @@ public partial class PreparationRunWindow : Window
                     this.Report(output);
                 }
             });
-            this.Result = await new PreparationRunner().RunAsync(profile, this._root, environment, progress, this._retryIndex, this._cancellation.Token);
+            var journalProgress = new PreparationLogProgress(this._journal, profile, progress, this._cancellation.Cancel);
+            this.Result = await new PreparationRunner().RunAsync(profile, this._root, environment, journalProgress, this._retryIndex, this._cancellation.Token);
             this._retryIndex = this.Result.FailedStepIndex
                 ?? this.Result.Steps.FirstOrDefault(step => step.IsCanceled)?.StepIndex
                 ?? this._rows.ToList().FindIndex(row => !row.Succeeded);
             this._retryIndex = Math.Max(0, this._retryIndex);
             this.StatusText.Text = L10n.T(this.Result.Success ? "Подготовка завершена." : this.Result.IsCanceled ? "Подготовка остановлена." : "Подготовка завершилась с ошибкой.");
+            if (journalProgress.Error is not null)
+            {
+                this.StatusText.Text = L10n.T("Не удалось записать полный журнал. Проверьте доступ к папке журналов и свободное место.");
+            }
+            this._journal.Finish(this.StatusText.Text);
             this.RetryButton.Visibility = this.Result.Success ? Visibility.Collapsed : Visibility.Visible;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException
             or InvalidOperationException or CryptographicException or FormatException)
         {
             this.StatusText.Text = L10n.T("Не удалось запустить подготовку. Проверьте профиль и значения переменных.");
+            try
+            {
+                this._journal?.Finish(this.StatusText.Text);
+            }
+            catch (Exception logError) when (logError is IOException or UnauthorizedAccessException)
+            {
+                this.StatusText.Text = L10n.T("Не удалось записать полный журнал. Проверьте доступ к папке журналов и свободное место.");
+            }
             this.RetryButton.Visibility = Visibility.Visible;
         }
         finally
@@ -116,6 +138,7 @@ public partial class PreparationRunWindow : Window
             var status = result.IsSkipped ? L10n.T("Пропущен") : result.IsCanceled ? L10n.T("Остановлен")
                 : result.ExitCode == 0 ? L10n.T("Готово") : L10n.T("Ошибка · код {0}", result.ExitCode);
             row.Finish(status, (Brush)this.FindResource(result.ExitCode == 0 ? "AddedTextBrush" : result.IsSkipped ? "MutedBrush" : "DeletedTextBrush"), result.ExitCode == 0);
+            this.AppendOutput(L10n.T("Результат шага {0}: {1}; код завершения: {2}", output.StepIndex + 1, status, result.ExitCode?.ToString() ?? "—") + Environment.NewLine);
         }
 
         if (output.Text.Length > 0)
@@ -129,6 +152,7 @@ public partial class PreparationRunWindow : Window
         if (this.OutputBox.Text.Length + text.Length > 1024 * 1024)
         {
             this.OutputBox.Text = this.OutputBox.Text[Math.Min(this.OutputBox.Text.Length, 256 * 1024)..];
+            this.DisplayLimitHint.Visibility = Visibility.Visible;
         }
 
         this.OutputBox.AppendText(text);
@@ -160,6 +184,18 @@ public partial class PreparationRunWindow : Window
         }
     }
 
+    private void Window_Closed(object? sender, EventArgs e)
+    {
+        try
+        {
+            this._journal?.Dispose();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Trace.WriteLine("Не удалось закрыть журнал подготовки: " + exception.Message);
+        }
+    }
+
     private void OpenFolder_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -182,11 +218,30 @@ public partial class PreparationRunWindow : Window
 
         try
         {
-            File.WriteAllText(dialog.FileName, this.OutputBox.Text, new UTF8Encoding(false));
+            this.ExportLog(dialog.FileName);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             this.StatusText.Text = L10n.T("Не удалось сохранить журнал.");
+        }
+    }
+
+    private void ExportLog(string path) => (this._journal ?? throw new InvalidOperationException("Журнал ещё не создан.")).Export(path);
+
+    private void OpenLog_Click(object sender, RoutedEventArgs e)
+    {
+        if (this.LogPath is not { } path)
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
+        {
+            this.StatusText.Text = L10n.T("Не удалось открыть журнал.");
         }
     }
 }
