@@ -25,6 +25,20 @@ internal static class Program
         var isPreview = args.Length == 2 && args[0] is "--preview" or "--compare" or "--graph" or "--graph-dark";
         var application = Program.CreateApplication(isPreview);
 
+        if (args.Contains("--update-check", StringComparer.Ordinal))
+        {
+            UpdateServiceChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Contains("--update-live-check", StringComparer.Ordinal))
+        {
+            InlineWorktreeUiChecks.RunAsync(LiveUpdateChecks.RunAsync);
+            application.Shutdown();
+            return;
+        }
+
         if (args.Contains("--branch-publication-check", StringComparer.Ordinal))
         {
             BranchPublicationUiChecks.Run();

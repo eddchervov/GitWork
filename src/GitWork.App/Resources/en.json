@@ -859,5 +859,9 @@
   "Ветка, HEAD или настройки remote изменились перед публикацией. Обновите состояние и повторите.": "The branch, HEAD or remote configuration changed before publication. Refresh and try again.",
   "На сервере уже есть ветка с таким именем. Выберите другое имя или настройте upstream существующей ветки.": "A branch with that name already exists on the remote. Choose another name or configure that existing branch as upstream.",
   "Ветка опубликована, но локальное состояние или настройки изменились. Upstream не настроен.": "The branch was published, but local state or configuration changed. Upstream was not configured.",
-  "Ветка опубликована, но локальные настройки изменились. Upstream не настроен.": "The branch was published, but local configuration changed. Upstream was not configured."
+  "Ветка опубликована, но локальные настройки изменились. Upstream не настроен.": "The branch was published, but local configuration changed. Upstream was not configured.",
+  "В release feed нет подходящего полного стабильного пакета Git Work.": "The release feed does not contain a valid full stable Git Work package.",
+  "Velopack не смог проверить пакеты этой версии в закреплённом release feed.": "Velopack could not verify this version's package against the pinned release feed.",
+  "Версия должна состоять из трёх числовых частей.": "The version must contain three numeric components.",
+  "Эта копия приложения не установлена через Velopack.": "This copy of the application is not installed through Velopack."
 }

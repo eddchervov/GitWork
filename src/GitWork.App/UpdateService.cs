@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Velopack;
 using Velopack.Locators;
 using Velopack.Sources;
@@ -13,12 +14,10 @@ namespace GitWork.App;
 public sealed class UpdateService
 {
     private const string RepositoryUrl = "https://github.com/eddchervov/GitWork";
-    private const string RepositoryApiUrl = "https://api.github.com/repos/eddchervov/GitWork";
-    private const string LatestReleaseApiUrl = "https://api.github.com/repos/eddchervov/GitWork/releases/latest";
+    private const string LatestFeedUrl = "https://github.com/eddchervov/GitWork/releases/latest/download/releases.win-x64-stable.json";
     private const string Channel = "win-x64-stable";
     private static readonly HttpClient s_httpClient = UpdateService.CreateHttpClient();
     private readonly HttpClient _httpClient;
-    private UpdateManager? _updateManager;
 
     public UpdateService(HttpClient? httpClient = null)
     {
@@ -32,24 +31,12 @@ public sealed class UpdateService
 
         try
         {
-            var updateManager = this.GetUpdateManager();
-            isInstalled = updateManager?.IsInstalled == true;
-            using var repositoryResponse = await this._httpClient.GetAsync(UpdateService.RepositoryApiUrl, cancellationToken);
-            if (repositoryResponse.StatusCode == HttpStatusCode.NotFound)
+            if (VelopackLocator.IsCurrentSet)
             {
-                return new UpdateCheckResult(UpdateCheckStatus.NoReleaseSource, currentVersion, IsInstalled: isInstalled);
+                isInstalled = this.GetUpdateManager(currentVersion, timeoutMinutes: 0.25).IsInstalled;
             }
 
-            if (!repositoryResponse.IsSuccessStatusCode)
-            {
-                return new UpdateCheckResult(
-                    UpdateCheckStatus.Unavailable,
-                    currentVersion,
-                    ErrorMessage: $"GitHub вернул HTTP {(int)repositoryResponse.StatusCode}.",
-                    IsInstalled: isInstalled);
-            }
-
-            using var response = await this._httpClient.GetAsync(UpdateService.LatestReleaseApiUrl, cancellationToken);
+            using var response = await this._httpClient.GetAsync(UpdateService.LatestFeedUrl, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new UpdateCheckResult(UpdateCheckStatus.NotPublished, currentVersion, IsInstalled: isInstalled);
@@ -65,28 +52,28 @@ public sealed class UpdateService
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var release = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var root = release.RootElement;
-            var tagName = UpdateService.ReadString(root, "tag_name");
-            var version = tagName.TrimStart('v', 'V');
-            if (!SemanticVersion.TryParse(version, out var latestVersion))
+            using var feed = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var release = UpdateService.ReadLatestRelease(feed.RootElement);
+            if (release is null)
             {
                 return new UpdateCheckResult(
                     UpdateCheckStatus.Unavailable,
                     currentVersion,
-                    ErrorMessage: "У релиза некорректная версия.",
+                    ErrorMessage: "В release feed нет подходящего полного стабильного пакета Git Work.",
                     IsInstalled: isInstalled);
             }
 
+            var latestVersion = release.Version;
+            var latestVersionText = latestVersion.ToString();
+            var releaseNotes = release.NotesMarkdown;
+            var installerUrl = UpdateService.GetInstallerUrl(latestVersionText);
             var parsedCurrentVersion = SemanticVersion.Parse(currentVersion);
-            var releaseNotes = UpdateService.ReadString(root, "body");
-            var installerUrl = UpdateService.ReadInstallerUrl(root, tagName);
             if (latestVersion.CompareTo(parsedCurrentVersion) <= 0)
             {
                 return new UpdateCheckResult(
                     UpdateCheckStatus.UpToDate,
                     currentVersion,
-                    latestVersion.ToString(),
+                    latestVersionText,
                     releaseNotes,
                     installerUrl,
                     IsInstalled: isInstalled);
@@ -95,16 +82,19 @@ public sealed class UpdateService
             UpdateInfo? updateInfo = null;
             if (isInstalled)
             {
-                updateInfo = await updateManager!.CheckForUpdatesAsync();
-                if (updateInfo is null)
+                var updateManager = this.GetUpdateManager(latestVersionText, timeoutMinutes: 0.25);
+                updateInfo = await updateManager.CheckForUpdatesAsync();
+                if (updateInfo is null
+                    || updateInfo.TargetFullRelease.Version.CompareTo(latestVersion) != 0
+                    || !UpdateService.MatchesReleaseAsset(updateInfo.TargetFullRelease, release))
                 {
                     return new UpdateCheckResult(
                         UpdateCheckStatus.Unavailable,
                         currentVersion,
-                        latestVersion.ToString(),
+                        latestVersionText,
                         releaseNotes,
                         installerUrl,
-                        ErrorMessage: "В релизе пока нет пакета обновления для этого канала.",
+                        ErrorMessage: "Velopack не смог проверить пакеты этой версии в закреплённом release feed.",
                         IsInstalled: true);
                 }
             }
@@ -112,7 +102,7 @@ public sealed class UpdateService
             return new UpdateCheckResult(
                 UpdateCheckStatus.UpdateAvailable,
                 currentVersion,
-                latestVersion.ToString(),
+                latestVersionText,
                 releaseNotes,
                 installerUrl,
                 updateInfo,
@@ -158,8 +148,16 @@ public sealed class UpdateService
     {
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(mayExit);
-        var updateManager = this.GetUpdateManager();
-        if (!result.HasUpdate || result.UpdateInfo is null || updateManager?.IsInstalled != true)
+        if (!result.HasUpdate || result.UpdateInfo is null || result.LatestVersion is null
+            || !UpdateService.TryParseStableVersion(result.LatestVersion, out var latestVersion)
+            || result.UpdateInfo.TargetFullRelease.Version.CompareTo(latestVersion) != 0
+            || !UpdateService.IsExpectedPackageAsset(result.UpdateInfo.TargetFullRelease, latestVersion))
+        {
+            throw new InvalidOperationException("Для этой копии приложения обновление через Velopack недоступно.");
+        }
+
+        var updateManager = this.GetUpdateManager(latestVersion.ToString(), timeoutMinutes: 15);
+        if (updateManager.IsInstalled != true)
         {
             throw new InvalidOperationException("Для этой копии приложения обновление через Velopack недоступно.");
         }
@@ -177,25 +175,15 @@ public sealed class UpdateService
         updateManager.ApplyUpdatesAndRestart(result.UpdateInfo.TargetFullRelease);
     }
 
-    private static HttpClient CreateHttpClient()
+    public static Uri GetVersionedReleaseBaseUri(string version)
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("GitWork", UpdateService.GetVersionForDisplay()));
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-
-        return client;
-    }
-
-    private UpdateManager? GetUpdateManager()
-    {
-        if (!VelopackLocator.IsCurrentSet)
+        if (!UpdateService.TryParseStableVersion(version, out var parsedVersion)
+            || !string.Equals(parsedVersion.ToString(), version, StringComparison.Ordinal))
         {
-            return null;
+            throw new ArgumentException("Версия должна состоять из трёх числовых частей.", nameof(version));
         }
 
-        return this._updateManager ??= new UpdateManager(
-            new GithubSource(UpdateService.RepositoryUrl, accessToken: null, prerelease: false),
-            new UpdateOptions { ExplicitChannel = UpdateService.Channel });
+        return new Uri($"{UpdateService.RepositoryUrl}/releases/download/v{version}/", UriKind.Absolute);
     }
 
     public static string GetVersionForDisplay()
@@ -205,50 +193,120 @@ public sealed class UpdateService
         return $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
-    private static string ReadString(JsonElement element, string propertyName)
+    private static HttpClient CreateHttpClient()
     {
-        return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? string.Empty
-            : string.Empty;
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("GitWork", UpdateService.GetVersionForDisplay()));
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        return client;
     }
 
-    private static Uri? ReadInstallerUrl(JsonElement release, string tagName)
+    private UpdateManager GetUpdateManager(string version, double timeoutMinutes)
     {
-        if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+        if (!VelopackLocator.IsCurrentSet)
+        {
+            throw new InvalidOperationException("Эта копия приложения не установлена через Velopack.");
+        }
+
+        var baseUri = UpdateService.GetVersionedReleaseBaseUri(version);
+        var source = new SimpleWebSource(baseUri, null, timeoutMinutes);
+
+        return new UpdateManager(source, new UpdateOptions { ExplicitChannel = UpdateService.Channel });
+    }
+
+    private static ReleaseAsset? ReadLatestRelease(JsonElement feed)
+    {
+        if (feed.ValueKind != JsonValueKind.Object
+            || !feed.TryGetProperty("Assets", out var assets)
+            || assets.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
 
+        ReleaseAsset? latest = null;
         foreach (var asset in assets.EnumerateArray())
         {
-            var name = UpdateService.ReadString(asset, "name");
-            var downloadUrl = UpdateService.ReadString(asset, "browser_download_url");
-            if (!name.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase)
-                || !Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri)
-                || uri.Scheme != Uri.UriSchemeHttps
-                || !uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)
-                || !UpdateService.IsGitWorkInstallerUrl(uri, tagName, name))
+            var candidate = UpdateService.ReadReleaseAsset(asset);
+            if (candidate is not null && (latest is null || candidate.Version.CompareTo(latest.Version) > 0))
             {
-                continue;
+                latest = candidate;
             }
-
-            return uri;
         }
 
-        return null;
+        return latest;
     }
 
-    private static bool IsGitWorkInstallerUrl(Uri uri, string tagName, string assetName)
+    private static ReleaseAsset? ReadReleaseAsset(JsonElement asset)
     {
-        var segments = Uri.UnescapeDataString(uri.AbsolutePath)
-            .Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (asset.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
 
-        return segments.Length == 6
-            && segments[0].Equals("eddchervov", StringComparison.OrdinalIgnoreCase)
-            && segments[1].Equals("GitWork", StringComparison.OrdinalIgnoreCase)
-            && segments[2].Equals("releases", StringComparison.OrdinalIgnoreCase)
-            && segments[3].Equals("download", StringComparison.OrdinalIgnoreCase)
-            && segments[4].Equals(tagName, StringComparison.Ordinal)
-            && segments[5].Equals(assetName, StringComparison.OrdinalIgnoreCase);
+        var packageId = UpdateService.ReadString(asset, "PackageId");
+        var versionText = UpdateService.ReadString(asset, "Version");
+        var assetType = UpdateService.ReadString(asset, "Type");
+        var fileName = UpdateService.ReadString(asset, "FileName");
+        var sha1 = UpdateService.ReadString(asset, "SHA1");
+        var sha256 = UpdateService.ReadString(asset, "SHA256");
+        if (packageId != "GitWork" || assetType != "Full"
+            || !UpdateService.TryParseStableVersion(versionText, out var version)
+            || fileName != $"GitWork-{version}-win-x64-stable-full.nupkg"
+            || !UpdateService.IsHexDigest(sha1, 40) || !UpdateService.IsHexDigest(sha256, 64)
+            || !asset.TryGetProperty("Size", out var sizeElement)
+            || !sizeElement.TryGetInt64(out var size) || size <= 0)
+        {
+            return null;
+        }
+
+        return new ReleaseAsset(version, fileName, sha1, sha256, size, UpdateService.ReadString(asset, "NotesMarkdown"));
     }
+
+    private static string ReadString(JsonElement element, string propertyName) =>
+        element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? string.Empty
+            : string.Empty;
+
+    private static bool TryParseStableVersion(string value, out SemanticVersion version)
+    {
+        version = default!;
+        if (!Regex.IsMatch(value, "^[0-9]+\\.[0-9]+\\.[0-9]+$", RegexOptions.CultureInvariant)
+            || !SemanticVersion.TryParse(value, out var parsed))
+        {
+            return false;
+        }
+
+        version = parsed;
+        return true;
+    }
+
+    private static bool IsHexDigest(string digest, int expectedLength) =>
+        digest.Length == expectedLength && digest.All(Uri.IsHexDigit);
+
+    private static Uri GetInstallerUrl(string version) =>
+        new($"{UpdateService.RepositoryUrl}/releases/download/v{version}/GitWork-win-x64-stable-Setup.exe", UriKind.Absolute);
+
+    private static bool MatchesReleaseAsset(VelopackAsset asset, ReleaseAsset release) =>
+        UpdateService.IsExpectedPackageAsset(asset, release.Version)
+        && string.Equals(asset.SHA1, release.Sha1, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(asset.SHA256, release.Sha256, StringComparison.OrdinalIgnoreCase)
+        && asset.Size == release.Size;
+
+    private static bool IsExpectedPackageAsset(VelopackAsset asset, SemanticVersion version) =>
+        asset.PackageId == "GitWork"
+        && asset.Type.ToString() == "Full"
+        && asset.Version.CompareTo(version) == 0
+        && asset.FileName == $"GitWork-{version}-win-x64-stable-full.nupkg"
+        && UpdateService.IsHexDigest(asset.SHA1, 40)
+        && UpdateService.IsHexDigest(asset.SHA256, 64)
+        && asset.Size > 0;
+
+    private sealed record ReleaseAsset(
+        SemanticVersion Version,
+        string FileName,
+        string Sha1,
+        string Sha256,
+        long Size,
+        string NotesMarkdown);
 }

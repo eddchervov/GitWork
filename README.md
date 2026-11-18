@@ -7,12 +7,12 @@ A focused Git client. A home for your worktrees.
 
 **English** · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-0.4.0-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.4.1-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
 </div>
 
 Git Work brings everyday Git and multi-repository workspaces into one Windows app. Review changes, follow history, and keep parallel tasks in separate worktrees without losing track of their folders or branches.
 
-The current stable release is **0.4.0**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
+The current stable release is **0.4.1**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
 
 ![Review changes in the dark theme](docs/images/changes-dark.png)
 
@@ -104,6 +104,8 @@ Choose **File → Language → English / Русский** and **View → Light t
 
 Use **Help → Check for updates** or the header bell, which appears when an update is available. Installed builds can download and apply a published update after you choose to install it. A portable development build first needs Setup to enter the installed update flow. No separate update server is required: releases and the update feed live on GitHub.
 
+Checks read the public `releases.win-x64-stable.json` file from the latest release. Downloads are pinned to a specific version, so publishing another release cannot change the selected package during an update. No GitHub API or token is required. Windows code signing establishes installer trust and is configured separately.
+
 ## Build from source
 
 Requires Windows, the .NET 10 SDK and Git for Windows.
@@ -122,7 +124,7 @@ dotnet run --project tests/GitWork.UiChecks/GitWork.UiChecks.csproj
 Build the self-contained installer and update feed:
 
 ~~~powershell
-./tools/Build-Release.ps1 -Version 0.4.0
+./tools/Build-Release.ps1 -Version 0.4.1
 ~~~
 
 See [Releasing](docs/RELEASING.md) for the draft-release workflow and the files that must be published together. Building does not publish anything.

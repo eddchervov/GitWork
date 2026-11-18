@@ -7,12 +7,12 @@ Git-клиент и рабочее пространство для worktree.
 
 [English](README.md) · **Русский**
 
-![Версия](https://img.shields.io/badge/version-0.4.0-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
+![Версия](https://img.shields.io/badge/version-0.4.1-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
 </div>
 
 Git Work объединяет повседневную работу с Git и комплекты из нескольких репозиториев. Смотрите изменения и историю, ведите параллельные задачи в отдельных worktree и быстро находите нужную папку или ветку.
 
-Текущая стабильная версия — **0.4.0**. Загрузки и описание изменений доступны в [последнем релизе](https://github.com/eddchervov/GitWork/releases/latest).
+Текущая стабильная версия — **0.4.1**. Загрузки и описание изменений доступны в [последнем релизе](https://github.com/eddchervov/GitWork/releases/latest).
 
 ![Просмотр изменений в тёмной теме](docs/images/changes-dark.png)
 
@@ -104,6 +104,8 @@ Online\Files\Configs\install.cmd "Online\Files\Configs\development.7z" debug oth
 
 Проверка обновлений доступна в **Справка → Проверить обновления** и через колокольчик, который появляется при доступном обновлении. Установленная версия сможет скачать и применить опубликованное обновление по вашему действию. Для перехода с переносной сборки на этот механизм сначала нужен Setup. Отдельный сервер не требуется: релизы и файлы обновлений размещаются на GitHub.
 
+Источник проверки — публичный файл `releases.win-x64-stable.json` из последнего релиза. Загрузка закрепляется за конкретной версией, чтобы новая публикация во время скачивания не меняла выбранный пакет. Проверка не требует GitHub API или токена. Цифровая подпись Windows относится к доверию к установщику и настраивается отдельно.
+
 ## Сборка
 
 Нужны Windows, .NET 10 SDK и Git for Windows. Команды выполняются из корня проекта.
@@ -122,7 +124,7 @@ dotnet run --project tests/GitWork.UiChecks/GitWork.UiChecks.csproj
 Установщик и файлы обновлений:
 
 ~~~powershell
-./tools/Build-Release.ps1 -Version 0.4.0
+./tools/Build-Release.ps1 -Version 0.4.1
 ~~~
 
 Процесс выпуска описан в [Releasing](docs/RELEASING.md). Сборка ничего не публикует.
