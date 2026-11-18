@@ -8,6 +8,41 @@ public sealed class GitService
 {
     public Task<string> RunAsync(string directory, params string[] arguments) => this.RunProcessAsync(directory, null, arguments);
 
+    /// <summary>
+    /// Передаёт пути через NUL-разделённый файл для команд Git с поддержкой --pathspec-from-file.
+    /// </summary>
+    public async Task<string> RunWithPathspecsAsync(
+        string directory,
+        IReadOnlyList<string> arguments,
+        IEnumerable<string> pathspecs)
+    {
+        var paths = pathspecs.ToArray();
+        if (paths.Length == 0 || paths.Any(path => path.Length == 0 || path.Contains('\0')))
+        {
+            throw new ArgumentException("Укажите непустой список корректных путей.", nameof(pathspecs));
+        }
+
+        var pathspecFile = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(pathspecFile, string.Join('\0', paths) + '\0', new UTF8Encoding(false));
+
+            return await this.RunAsync(directory,
+                [.. arguments, "--pathspec-from-file=" + pathspecFile, "--pathspec-file-nul"]);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(pathspecFile);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                Trace.TraceWarning("Не удалось удалить временный список путей Git: {0}", exception.Message);
+            }
+        }
+    }
+
     public Task<string> RunWithTimeoutAsync(string directory, TimeSpan timeout, params string[] arguments)
     {
         if (timeout <= TimeSpan.Zero || timeout > TimeSpan.FromHours(2))
@@ -56,6 +91,10 @@ public sealed class GitService
         try
         {
             process.Start();
+        }
+        catch (Win32Exception exception) when (exception.NativeErrorCode == 206)
+        {
+            throw new GitException("Команда Git превышает ограничение длины командной строки Windows. Список файлов нужно передавать через файл параметров.");
         }
         catch (Win32Exception exception)
         {
@@ -121,7 +160,19 @@ public sealed class GitService
         var output = await this.RunAsync(worktree, "status", "--porcelain=v1", "-z",
             includeAllUntrackedFiles ? "--untracked-files=all" : "--untracked-files=normal");
 
-        return GitOutputParser.ParseStatus(output);
+        var root = Path.GetFullPath(worktree);
+        return GitOutputParser.ParseStatus(output).Select(file =>
+        {
+            var relativePath = file.Path.TrimEnd('/', '\\');
+            var fullPath = Path.GetFullPath(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var isWithinWorktree = fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase);
+            var marker = Path.Combine(fullPath, ".git");
+            var isGitLink = isWithinWorktree && Directory.Exists(fullPath)
+                && (File.Exists(marker) || Directory.Exists(marker));
+
+            return file with { IsGitLink = isGitLink };
+        }).ToArray();
     }
 
     public async Task<IReadOnlyList<BranchInfo>> GetBranchesAsync(string repository, IReadOnlyList<WorktreeInfo> worktrees)

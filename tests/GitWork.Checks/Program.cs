@@ -15,6 +15,39 @@ void Check(bool condition, string name)
     Console.WriteLine($"OK: {name}");
 }
 
+if (args.Contains("--branch-publication-only", StringComparer.Ordinal))
+{
+    await BranchPublicationChecks.RunAsync(Check);
+    Console.WriteLine($"Успешно: {checks} проверок публикации ветки.");
+    return;
+}
+
+if (args.Contains("--selected-commit-only", StringComparer.Ordinal))
+{
+    await SelectedCommitChecks.RunAsync(Check);
+    Console.WriteLine($"Успешно: {checks} проверок выбранного коммита.");
+    return;
+}
+
+if (args.Contains("--branch-deletion-only", StringComparer.Ordinal))
+{
+    await BranchDeletionChecks.RunAsync(Check);
+    return;
+}
+
+if (args.Contains("--file-actions-only", StringComparer.Ordinal))
+{
+    await FileActionsChecks.RunAsync(Check);
+    return;
+}
+
+if (args.Contains("--stash-only", StringComparer.Ordinal))
+{
+    await StashChecks.RunAsync(Check);
+    Console.WriteLine($"Успешно: {checks} проверок stash.");
+    return;
+}
+
 if (args.Contains("--preparation-only", StringComparer.Ordinal))
 {
     await PreparationChecks.RunAsync(Check);
@@ -519,6 +552,10 @@ if (args.Length > 0)
 await CommitOperationChecks.RunAsync(Check);
 await CloneChecks.RunAsync(Check);
 await SelectedCommitChecks.RunAsync(Check);
+await StashChecks.RunAsync(Check);
+await BranchDeletionChecks.RunAsync(Check);
+await BranchPublicationChecks.RunAsync(Check);
+await FileActionsChecks.RunAsync(Check);
 await BranchComparisonChecks.RunAsync(Check);
 await WorkspaceRepositoryRemovalChecks.RunAsync(Check);
 await PreparationChecks.RunAsync(Check);

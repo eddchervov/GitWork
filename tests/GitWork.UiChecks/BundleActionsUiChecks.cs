@@ -39,6 +39,8 @@ internal static class BundleActionsUiChecks
             }).GetAwaiter().GetResult();
             var bundle = new ProjectWorkspace { Name = "Fixture", RepositoryPaths = [repository] };
             window = new MainWindow();
+            typeof(MainWindow).GetMethod("ApplyMainSection", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(window, ["Worktrees", false]);
             typeof(MainWindow).GetField("_activeWorkspace", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, bundle);
             var rows = new[]
             {

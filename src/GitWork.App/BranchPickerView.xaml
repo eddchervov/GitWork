@@ -13,7 +13,7 @@
         <Button DockPanel.Dock="Right" Content="×" Click="Close_Click" Padding="8,2" ToolTip="{local:Loc 'Закрыть'}" AutomationProperties.Name="{local:Loc 'Закрыть список веток'}" />
         <TextBlock Text="{local:Loc 'Ветки'}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
       </DockPanel>
-      <Border x:Name="CurrentBranchCard" Grid.Row="1" Background="{DynamicResource SelectionBrush}" Padding="10,6" Margin="0,0,0,10">
+      <Border x:Name="CurrentBranchCard" Grid.Row="1" Background="{DynamicResource SelectionBrush}" Padding="10,6" Margin="0,0,0,10" PreviewMouseRightButtonDown="CurrentBranchCard_PreviewMouseRightButtonDown">
         <DockPanel>
           <TextBlock DockPanel.Dock="Left" Text="✓" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
           <StackPanel>
@@ -39,13 +39,13 @@
       </Grid>
       <TextBlock x:Name="DirtyWarning" Grid.Row="3" Text="{local:Loc 'Сначала сохраните или закоммитьте изменения.'}" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Margin="0,0,0,9" Visibility="Collapsed" />
       <Grid Grid.Row="4">
-        <ListBox x:Name="BranchesList" PreviewMouseLeftButtonUp="BranchesList_PreviewMouseLeftButtonUp" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.IsVirtualizingWhenGrouping="True" AutomationProperties.Name="{local:Loc 'Ветки репозитория'}">
+        <ListBox x:Name="BranchesList" PreviewMouseLeftButtonUp="BranchesList_PreviewMouseLeftButtonUp" PreviewMouseRightButtonDown="BranchesList_PreviewMouseRightButtonDown" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.IsVirtualizingWhenGrouping="True" AutomationProperties.Name="{local:Loc 'Ветки репозитория'}">
         <ListBox.ItemContainerStyle>
           <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
             <Setter Property="Padding" Value="8,5" />
             <Setter Property="Margin" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="IsEnabled" Value="{Binding IsSelectable}" />
+            <Setter Property="IsEnabled" Value="True" />
             <Setter Property="ToolTip" Value="{Binding Branch.FullName}" />
           </Style>
         </ListBox.ItemContainerStyle>

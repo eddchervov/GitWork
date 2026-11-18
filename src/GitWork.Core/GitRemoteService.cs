@@ -1,6 +1,6 @@
 namespace GitWork.Core;
 
-public sealed class GitRemoteService(GitService git)
+public sealed partial class GitRemoteService(GitService git)
 {
     private readonly GitService _git = git;
 
@@ -67,7 +67,10 @@ public sealed class GitRemoteService(GitService git)
         }
 
         return new RemoteRepositoryState(root, branch, head, upstreamRemote, upstreamBranch, upstreamRef,
-            ahead, behind, remotes, reason is null, reason, branch is null);
+            ahead, behind, remotes, reason is null, reason, branch is null)
+        {
+            HasUpstreamConfiguration = upstreamRemote is not null || configuredMerge is not null
+        };
     }
 
     public async Task<RemoteOperationResult> FetchAsync(string worktree, string remoteName)
@@ -423,7 +426,7 @@ public sealed class GitRemoteService(GitService git)
 
     private sealed record RemoteIdentity(string? Branch, string? UpstreamRemote, string? UpstreamRef, string? UpstreamBranch, string? Head)
     {
-        public bool Matches(string branch, string remote, string upstreamRef, string upstreamBranch, string? head) =>
+        public bool Matches(string? branch, string? remote, string? upstreamRef, string? upstreamBranch, string? head) =>
             this.Branch == branch && this.UpstreamRemote == remote && this.UpstreamRef == upstreamRef
                 && this.UpstreamBranch == upstreamBranch && this.Head == head;
     }

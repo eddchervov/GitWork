@@ -20,12 +20,15 @@
               <Setter Property="Padding" Value="12,7" />
               <Setter Property="Margin" Value="0" />
               <EventSetter Event="ContextMenuOpening" Handler="Repository_ContextMenuOpening" />
+              <EventSetter Event="PreviewMouseRightButtonDown" Handler="Repository_PreviewMouseRightButtonDown" />
+              <EventSetter Event="PreviewMouseRightButtonUp" Handler="Repository_PreviewMouseRightButtonUp" />
               <EventSetter Event="Loaded" Handler="RepositoryRow_Loaded" />
               <Setter Property="ToolTip" Value="{Binding Tag.Description, RelativeSource={RelativeSource Self}}" />
               <Setter Property="ContextMenu">
                 <Setter.Value>
                   <ContextMenu>
-                    <MenuItem Header="{local:Loc 'Убрать из списка'}">
+                    <ContextMenu.Style><Style TargetType="ContextMenu" BasedOn="{StaticResource {x:Type ContextMenu}}"><EventSetter Event="Opened" Handler="RepositoryMenu_Opened" /></Style></ContextMenu.Style>
+                    <MenuItem Header="{local:Loc 'Убрать из списка'}" Tag="remove-repository">
                       <MenuItem.Style>
                         <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                           <EventSetter Event="Click" Handler="RemoveRepository_Click" />
@@ -85,16 +88,15 @@
     </Border>
     <GridSplitter x:Name="RepositorySplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="Transparent" />
     <Grid Grid.Column="2">
-      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition /></Grid.RowDefinitions>
       <Border Padding="12,7" Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-        <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-          <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-            <DockPanel Margin="0,0,0,4">
-              <TextBox x:Name="RepositoryName" FontSize="16" FontWeight="SemiBold" IsReadOnly="True" Style="{StaticResource SelectableText}" Text="{local:Loc 'Выберите репозиторий'}" Margin="0,0,14,0" />
-              <TextBox x:Name="RepositoryLocation" TextWrapping="NoWrap" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" IsReadOnly="True" Style="{StaticResource SelectableText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" />
-            </DockPanel>
-            <StackPanel Orientation="Horizontal">
-            <Button x:Name="BranchSelectorButton" Click="Branches_Click" IsEnabled="False" Padding="8,3" Width="230" HorizontalContentAlignment="Stretch" HorizontalAlignment="Left" AutomationProperties.Name="{local:Loc 'Выбрать ветку'}">
+        <StackPanel>
+          <DockPanel Margin="0,0,0,8">
+            <TextBox x:Name="RepositoryName" FontSize="16" FontWeight="SemiBold" IsReadOnly="True" Style="{StaticResource SelectableText}" Text="{local:Loc 'Выберите репозиторий'}" Margin="0,0,14,0" ContextMenuOpening="RepositoryHeader_ContextMenuOpening"><TextBox.ContextMenu><ContextMenu Opened="RepositoryHeaderMenu_Opened" /></TextBox.ContextMenu></TextBox>
+            <TextBox x:Name="RepositoryLocation" TextWrapping="NoWrap" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" IsReadOnly="True" Style="{StaticResource SelectableText}" Foreground="{DynamicResource MutedBrush}" FontSize="11" VerticalAlignment="Center" />
+          </DockPanel>
+          <WrapPanel VerticalAlignment="Center">
+            <Button x:Name="BranchSelectorButton" Click="Branches_Click" IsEnabled="False" Padding="8,3" Width="230" Margin="0,0,12,0" HorizontalContentAlignment="Stretch" HorizontalAlignment="Left" AutomationProperties.Name="{local:Loc 'Выбрать ветку'}">
               <Button.Style>
                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                   <Style.Triggers>
@@ -107,21 +109,29 @@
               </Button.Style>
               <DockPanel><Viewbox Width="14" Height="16" VerticalAlignment="Center" Margin="0,0,8,0"><Canvas Width="16" Height="18"><Path Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.3" Data="M 4,5 L 4,13 M 4,10 C 4,8 12,10 12,5" /><Ellipse Canvas.Left="2" Canvas.Top="1" Width="4" Height="4" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.3" /><Ellipse Canvas.Left="2" Canvas.Top="13" Width="4" Height="4" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.3" /><Ellipse Canvas.Left="10" Canvas.Top="1" Width="4" Height="4" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.3" /></Canvas></Viewbox><TextBlock Text="⌄" DockPanel.Dock="Right" Margin="12,0,0,0" /><TextBlock x:Name="CurrentBranchLabel" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /></DockPanel>
             </Button>
-            <Button x:Name="BackToWorkspace" Content="{local:Loc '← К worktree'}" Click="BackToWorkspace_Click" Margin="8,0,0,0" Visibility="Collapsed" />
-            </StackPanel>
-          </StackPanel>
-          <WrapPanel x:Name="HeaderActions" Grid.Column="1" VerticalAlignment="Center" IsEnabled="False">
-            <ComboBox x:Name="SyncRemotePicker" Width="100" DisplayMemberPath="Name" SelectionChanged="SyncRemote_Changed" Visibility="Collapsed" Padding="5,3" Margin="0,0,6,0" />
-            <Button x:Name="SyncFetchButton" Content="Fetch" Click="SyncFetch_Click" IsEnabled="False" Padding="8,3" Margin="0,0,6,0" />
-            <Button x:Name="SyncPullButton" Content="Pull" Click="SyncPull_Click" IsEnabled="False" Padding="8,3" Margin="0,0,6,0" />
-            <Button x:Name="SyncPushButton" Content="Push" Click="SyncPush_Click" IsEnabled="False" Padding="8,3" Margin="0,0,12,0" />
-            <Button Content="IDE" Tag="ide" Click="Launch_Click" Padding="8,3" Margin="0,0,6,0" />
-            <Button Content="{local:Loc 'Терминал'}" Tag="terminal" Click="Launch_Click" Padding="8,3" Margin="0,0,6,0" />
-            <Button Content="{local:Loc 'Папка'}" Tag="folder" Click="Launch_Click" Padding="8,3" />
-            <Button Content="⋯" Click="MoreActions_Click" Padding="8,3" Margin="6,0,0,0" AutomationProperties.Name="{local:Loc 'Другие действия'}"><Button.ContextMenu><ContextMenu><MenuItem x:Name="PrepareMenuItem" Header="{local:Loc 'Запустить подготовку…'}" Click="Preparation_Click" /></ContextMenu></Button.ContextMenu></Button>
-            <ContentControl x:Name="ViewActionsHost" Visibility="Collapsed" Width="0" />
+            <Button x:Name="BackToWorkspace" Content="{local:Loc '← К worktree'}" Click="BackToWorkspace_Click" Margin="0,0,12,0" Visibility="Collapsed" />
+            <WrapPanel x:Name="HeaderActions" VerticalAlignment="Center" IsEnabled="False">
+              <ComboBox x:Name="SyncRemotePicker" Width="100" DisplayMemberPath="Name" SelectionChanged="SyncRemote_Changed" Visibility="Collapsed" Padding="5,3" Margin="0,0,6,0" />
+              <Button x:Name="SyncFetchButton" Content="Fetch" Click="SyncFetch_Click" IsEnabled="False" Padding="8,3" Margin="0,0,6,0" />
+              <Button x:Name="SyncPullButton" Content="Pull" Click="SyncPull_Click" IsEnabled="False" Padding="8,3" Margin="0,0,6,0" />
+              <Button x:Name="SyncPushButton" Content="Push" Click="SyncPush_Click" IsEnabled="False" Padding="8,3" Margin="0,0,12,0" />
+              <Button x:Name="MoreActionsButton" Content="⋯" Click="MoreActions_Click" Padding="8,3" AutomationProperties.Name="{local:Loc 'Другие действия'}">
+                <Button.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem x:Name="StashMenuItem" Header="Stash…" Click="Stash_Click" ToolTip="{local:Loc 'Спрятать и восстановить изменения'}" />
+                    <Separator />
+                    <MenuItem Header="IDE" Tag="ide" Click="Launch_Click" />
+                    <MenuItem Header="{local:Loc 'Терминал'}" Tag="terminal" Click="Launch_Click" />
+                    <MenuItem Header="{local:Loc 'Папка'}" Tag="folder" Click="Launch_Click" />
+                    <Separator />
+                    <MenuItem x:Name="PrepareMenuItem" Header="{local:Loc 'Запустить подготовку…'}" Click="Preparation_Click" />
+                  </ContextMenu>
+                </Button.ContextMenu>
+              </Button>
+              <ContentControl x:Name="ViewActionsHost" Visibility="Collapsed" Width="0" />
+            </WrapPanel>
           </WrapPanel>
-        </Grid>
+        </StackPanel>
       </Border>
       <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
         <StackPanel x:Name="ViewTabs" Orientation="Horizontal" Margin="0" VerticalAlignment="Center">
@@ -131,17 +141,6 @@
         </StackPanel>
       </Border>
       <ContentControl x:Name="ViewHost" Grid.Row="2" />
-      <TextBlock x:Name="ErrorText" Grid.Row="3" Foreground="{DynamicResource WarningBrush}" Margin="16,5" TextWrapping="Wrap">
-        <TextBlock.Style>
-          <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-            <Style.Triggers>
-              <Trigger Property="Text" Value="">
-                <Setter Property="Visibility" Value="Collapsed" />
-              </Trigger>
-            </Style.Triggers>
-          </Style>
-        </TextBlock.Style>
-      </TextBlock>
     </Grid>
     <Border x:Name="BranchPickerHost" Grid.ColumnSpan="3" Panel.ZIndex="10" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top" Background="{DynamicResource SurfaceBrush}" ClipToBounds="True">
       <local:BranchPickerView x:Name="BranchPicker" />

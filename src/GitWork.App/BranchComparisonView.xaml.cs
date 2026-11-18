@@ -34,6 +34,8 @@ public partial class BranchComparisonView : UserControl
         this.InitializeComponent();
         this.Unloaded += (_, _) => this.Detach();
         this._repository = path;
+        FileContextMenus.Attach(this.FilesList, git, item => item is ChangedFile file
+            ? new FileMenuTarget(path, file, false) : null, () => false);
         this._git = git;
         this._changes = new GitChangeService(git);
         this.BasePicker.ItemsSource = this.References;

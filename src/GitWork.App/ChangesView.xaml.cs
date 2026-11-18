@@ -32,7 +32,7 @@ public partial class ChangesView : UserControl
 
     public bool IsBusy => this._isBusy || this._isReloading;
 
-    public bool CanLeave => !this.IsBusy;
+    public bool CanLeave => !this._isBusy;
 
     public void Detach()
     {
@@ -52,6 +52,10 @@ public partial class ChangesView : UserControl
         this._autoRefresh = autoRefresh;
         this._index = new GitIndexService(git);
         this._changes = new GitChangeService(git);
+        FileContextMenus.Attach(this.FilesList, git, item => item is ChangeFileEntry entry
+            ? new FileMenuTarget(entry.Source.Path, entry.File, true,
+                entry.CanInclude ? () => entry.IsIncluded = !entry.IsIncluded : null, entry.IsIncluded)
+            : null, () => this.IsBusy, this.SetBusy, this.RefreshAsync);
         this._sources.AddRange(sources.Select(source => source with { Path = Path.GetFullPath(source.Path) }));
         this.ReplaceFiles(new Dictionary<string, bool>());
         this._filesView = CollectionViewSource.GetDefaultView(this._files);
@@ -329,10 +333,11 @@ public partial class ChangesView : UserControl
         var entries = this._files.Where(this.IsCurrentRepository).ToArray();
         var eligibleCount = entries.Count(entry => entry.CanInclude);
         var count = entries.Count(entry => entry.IsIncluded);
-        this.TitleText.Text = L10n.T("Изменения · {0}", entries.Length);
+        this.TitleText.Text = L10n.T("Файлы");
         this.CommitSelectionText.Text = L10n.T("Выбрано {0} из {1}", count, eligibleCount);
         this.SelectAllBox.IsChecked = count == 0 ? false : count == eligibleCount ? true : null;
         this.SelectAllBox.IsEnabled = !this._isBusy && eligibleCount > 0;
+        this.DiscardAllButton.IsEnabled = !this.IsBusy && entries.Any(entry => !entry.File.IsDirectory && !entry.File.IsGitLink);
         this.CommitButton.Content = this._isBusy ? L10n.T("Подождите…") : L10n.T("Создать коммит ({0})", count);
         this.CommitButton.IsEnabled = !this.IsBusy && count > 0 && !string.IsNullOrWhiteSpace(this.CommitTitleBox.Text);
     }
@@ -472,7 +477,7 @@ public sealed class ChangeFileEntry : INotifyPropertyChanged
 
     public string StatusCode => this.File.StatusCode;
 
-    public bool CanInclude => !this.File.IsDirectory;
+    public bool CanInclude => !this.File.IsDirectory || this.File.IsGitLink;
 
     public bool HasStaged => this.File.Status.Length > 0 && this.File.Status[0] != ' ' && this.File.Status != "??";
 

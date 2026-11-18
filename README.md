@@ -7,12 +7,12 @@ A focused Git client. A home for your worktrees.
 
 **English** · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-0.3.6-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.4.0-70cbbb) ![Windows](https://img.shields.io/badge/Windows-x64-58687d) [![License: MIT](https://img.shields.io/badge/license-MIT-70cbbb)](LICENSE)
 </div>
 
 Git Work brings everyday Git and multi-repository workspaces into one Windows app. Review changes, follow history, and keep parallel tasks in separate worktrees without losing track of their folders or branches.
 
-The current stable release is **0.3.6**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
+The current stable release is **0.4.0**. See [the latest release](https://github.com/eddchervov/GitWork/releases/latest) for downloads and release notes.
 
 ![Review changes in the dark theme](docs/images/changes-dark.png)
 
@@ -37,19 +37,34 @@ The Repositories and Worktree tabs keep their selected views independently; Repo
 - Commit only the selected files; unchecked files stay outside that commit.
 - A compact commit graph, file history, branches and worktrees from a commit, and cherry-pick.
 - Fetch, pull and push with visible incoming and outgoing commit counts.
+- For a local branch without upstream, **Publish branch…** opens a remote and new branch name chooser. Confirmation creates the remote branch and configures tracking for future Push/Pull operations. An existing remote branch is never overwritten.
 - Branch comparison with an explicit source and destination.
 - Browse local and remote branches in one searchable list with the current branch pinned. A clean repository switches to a selected local branch; switching is unavailable while it has changes. A remote branch opens the create-branch dialog with its source preselected. Branches checked out in another worktree are unavailable.
-- Compact header controls for Fetch, Pull and Push with incoming and outgoing counts, alongside IDE, terminal and folder actions.
+- Compact header controls for Fetch, Pull and Push sit next to the branch selector. Stash, IDE, terminal and folder actions are in the **…** menu.
 - A flat interface with compact rows, a wide diff, C# syntax colors for keywords, types, methods, strings and comments, plus addition/deletion counts.
 - Changed fragments stand out inside modified lines in both unified and side-by-side diffs. Code remains selectable and copyable; large replacements keep whole-line highlighting to bound preview work.
 - Expand unchanged lines above, between and below diff blocks, 20 at a time or the whole gap. The same controls work in Changes, commit history, file history and branch comparison, in both layouts.
 - File lists in Changes, comparison and history share a clear filename, muted path and colored status marker. [Comparison preview](docs/images/comparison-dark.png).
-- Untracked folders and nested worktrees have a folder icon and an explanation. They are excluded from commits in the parent repository, including Select All.
+- Nested repositories and worktrees can be selected for a parent commit as Git commit references (`gitlink`); their preview shows the referenced hash. Their internal files are not copied into that commit.
 - History above the selected commit's files and diff, with message, author, date, hash and commit search.
 
 ![Explore the commit history](docs/images/history-dark.png)
 
 ![Search local and remote branches](docs/images/branches-dark.png)
+
+## Context menus
+
+Right-click a local branch in the branch picker to delete it after confirmation. The current branch and branches checked out in worktrees are protected; an unmerged branch requires a separate warning. This action does not delete branches on the remote server.
+
+File context menus in Changes, History and Comparison provide working-file opening, Explorer, file history and full or repository-relative paths. Changes also supports including a file in the commit, adding an exact file or parent-folder rule to `.gitignore`, and discarding changes. Before discarding, working and staged versions are backed up to `%LocalAppData%\GitWork\backups\discard`; the status bar shows the backup path. A `.gitignore` rule does not hide an already tracked file.
+
+Use **Discard all…** beside the **Files** heading to discard the selected repository's ordinary file changes after confirmation, including staged and untracked files hidden by search. All working and index versions are backed up before discarding starts. Nested repositories, worktrees and ignored files are preserved.
+
+## Stash local changes
+
+Open **… → Stash…** in a repository or worktree header. Add an optional message and choose **Stash changes**; enable **Include untracked files** to save new files too. Ignored files stay in the working copy.
+
+The stash list is shared by all worktrees of a repository. Preview saved **Working tree** and **Index (staged)** versions separately, with the same syntax colors and expandable diff context as other views. **Apply** restores changes and keeps the entry; **Apply and drop** removes it only after a successful apply. Conflicts keep the stash available. Existing tracked changes and overlapping untracked paths must be resolved before applying. Deleting a stash asks for confirmation.
 
 ## Work on several repositories together
 
@@ -107,7 +122,7 @@ dotnet run --project tests/GitWork.UiChecks/GitWork.UiChecks.csproj
 Build the self-contained installer and update feed:
 
 ~~~powershell
-./tools/Build-Release.ps1 -Version 0.3.6
+./tools/Build-Release.ps1 -Version 0.4.0
 ~~~
 
 See [Releasing](docs/RELEASING.md) for the draft-release workflow and the files that must be published together. Building does not publish anything.

@@ -25,6 +25,55 @@ internal static class Program
         var isPreview = args.Length == 2 && args[0] is "--preview" or "--compare" or "--graph" or "--graph-dark";
         var application = Program.CreateApplication(isPreview);
 
+        if (args.Contains("--branch-publication-check", StringComparer.Ordinal))
+        {
+            BranchPublicationUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Contains("--file-menus-check", StringComparer.Ordinal))
+        {
+            FileMenusUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Contains("--branch-deletion-check", StringComparer.Ordinal))
+        {
+            BranchPickerUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Contains("--stash-check", StringComparer.Ordinal))
+        {
+            StashUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Contains("--tab-navigation-check", StringComparer.Ordinal))
+        {
+            TabNavigationUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Contains("--context-menu-check", StringComparer.Ordinal))
+        {
+            ContextMenuUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
+        if (args.Contains("--startup-check", StringComparer.Ordinal))
+        {
+            StartupUiChecks.Run();
+            application.Shutdown();
+            return;
+        }
+
         if (args.Contains("--untracked-directory-check", StringComparer.Ordinal))
         {
             UntrackedDirectoryUiChecks.Run();
@@ -129,7 +178,14 @@ internal static class Program
         DailyChecks.Run();
         GraphUiChecks.Run();
         Program.CheckChangeScopes();
+        StartupUiChecks.Run();
+        ContextMenuUiChecks.Run();
         UntrackedDirectoryUiChecks.Run();
+        StashUiChecks.Run();
+        BranchPickerUiChecks.Run();
+        FileMenusUiChecks.Run();
+        BranchPublicationUiChecks.Run();
+        TabNavigationUiChecks.Run();
         SelectedCommitUiChecks.Run();
         InlineWorktreeUiChecks.Run();
         RepositoryClientUiChecks.Run();
@@ -139,6 +195,8 @@ internal static class Program
         PreparationUiChecks.Run();
 
         var window = new MainWindow();
+        typeof(MainWindow).GetMethod("ApplyMainSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(window, ["Worktrees", false]);
         var root = (Grid)window.Content;
         var workspace = (Grid)window.FindName("Workspace");
         ((FrameworkElement)window.FindName("DetailPanel")).IsEnabled = true;

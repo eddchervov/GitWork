@@ -17,6 +17,9 @@ public partial class GitClientView : UserControl
     private string _mode = "Changes";
     private bool _updating;
     private bool _loading;
+    private bool _switchingView;
+    private int _viewRequestVersion;
+    private int _statusVersion;
     private int _branchVersion;
     private bool _workspaceContext;
 
@@ -32,12 +35,20 @@ public partial class GitClientView : UserControl
 
     public event Action<RepositoryInfo, WorktreeInfo>? ContextChanged;
 
-    public bool CanLeave => !this._loading && (this.ViewHost.Content switch
+    public event EventHandler? StatusChanged;
+
+    public string StatusMessage { get; private set; } = "";
+
+    public bool IsLoading => this._loading;
+
+    public bool CanLeave => !this._loading && this.CanLeaveCurrentView;
+
+    private bool CanLeaveCurrentView => this.ViewHost.Content switch
     {
         GitHistoryView history => history.CanLeave,
         ChangesView changes => changes.CanLeave,
         _ => true
-    });
+    };
 
     public GitClientView(GitService git, AppSettings settings)
     {
@@ -187,21 +198,50 @@ public partial class GitClientView : UserControl
             return;
         }
 
-        if (!this.CanLeave)
+        if (!this.CanLeaveCurrentView || this._loading && !this._switchingView)
         {
-            this._updating = true;
-            this.ChangesTab.IsChecked = this._mode == "Changes";
-            this.HistoryTab.IsChecked = this._mode == "History";
-            this.ComparisonTab.IsChecked = this._mode == "Comparison";
-            this._updating = false;
+            await this.Dispatcher.InvokeAsync(() =>
+            {
+                this._updating = true;
+                this.ChangesTab.IsChecked = this._mode == "Changes";
+                this.HistoryTab.IsChecked = this._mode == "History";
+                this.ComparisonTab.IsChecked = this._mode == "Comparison";
+                this._updating = false;
+            });
             return;
         }
 
         this._mode = mode;
+        this._viewRequestVersion++;
+        if (this._switchingView)
+        {
+            this.DetachView();
+            return;
+        }
+
         await this.RunAsync(this.ShowCurrentViewAsync);
     }
 
     private async Task ShowCurrentViewAsync()
+    {
+        this._switchingView = true;
+        try
+        {
+            int version;
+            do
+            {
+                version = this._viewRequestVersion;
+                await this.ShowViewAsync(this._mode, version);
+            }
+            while (version != this._viewRequestVersion);
+        }
+        finally
+        {
+            this._switchingView = false;
+        }
+    }
+
+    private async Task ShowViewAsync(string mode, int version)
     {
         this.HistoryTab.IsEnabled = true;
         this.ComparisonTab.IsEnabled = true;
@@ -216,12 +256,17 @@ public partial class GitClientView : UserControl
         this.BranchSelectorButton.IsEnabled = true;
         this.ViewTabs.Visibility = Visibility.Visible;
         this.ContextChanged?.Invoke(repository, tree);
-        if (this._mode == "Changes")
+        if (mode == "Changes")
         {
             var files = await this._git.GetStatusAsync(tree.Path, true);
+            if (version != this._viewRequestVersion)
+            {
+                return;
+            }
+
             this.ViewHost.Content = new ChangesView(repository.Name, [new ChangeSource(repository.Name, tree.Path, files)], this._git, autoRefresh: this._settings.AutoRefresh);
         }
-        else if (this._mode == "Comparison")
+        else if (mode == "Comparison")
         {
             this.ViewHost.Content = new BranchComparisonView(tree.Path, this._git);
         }
@@ -373,7 +418,7 @@ public partial class GitClientView : UserControl
         {
             if (version == this._branchVersion)
             {
-                this.ErrorText.Text = L10n.T(exception.Message);
+                this.SetStatus(L10n.T(exception.Message));
             }
         }
     }
@@ -393,7 +438,17 @@ public partial class GitClientView : UserControl
 
     private async void RemoveRepository_Click(object sender, RoutedEventArgs e)
     {
-        if (!this.CanLeave || sender is not MenuItem item || ItemsControl.ItemsControlFromItemContainer(item) is not ContextMenu { PlacementTarget: ListBoxItem { DataContext: RepositoryInfo repository } })
+        if (sender is not MenuItem item || ItemsControl.ItemsControlFromItemContainer(item) is not ContextMenu { PlacementTarget: ListBoxItem { DataContext: RepositoryInfo repository } })
+        {
+            return;
+        }
+
+        if (this._repositoryMenuSelection is { } selection)
+        {
+            await selection;
+        }
+
+        if (!this.CanLeave)
         {
             return;
         }
@@ -404,7 +459,7 @@ public partial class GitClientView : UserControl
 
     private void Repository_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
-        e.Handled = !this.CanLeave;
+        e.Handled = !this.CanLeave || sender is not ListBoxItem { DataContext: RepositoryInfo };
     }
 
     private void AddRepository_Click(object sender, RoutedEventArgs e) => this.AddRepositoryRequested?.Invoke(this, EventArgs.Empty);
@@ -431,7 +486,7 @@ public partial class GitClientView : UserControl
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
-        if (!this.CanLeave || this._selectedCopy is not { } tree || sender is not Button { Tag: string action })
+        if (!this.CanLeave || this._selectedCopy is not { } tree || sender is not FrameworkElement { Tag: string action })
         {
             return;
         }
@@ -462,20 +517,34 @@ public partial class GitClientView : UserControl
         }
 
         this._loading = true;
-        this.ErrorText.Text = L10n.T("Загрузка…");
+        this.StashMenuItem.IsEnabled = false;
+        this.SetStatus(L10n.T("Загрузка…"));
+        var statusVersion = this._statusVersion;
         try
         {
             await action();
-            this.ErrorText.Text = "";
+            if (statusVersion == this._statusVersion)
+            {
+                this.SetStatus("");
+            }
         }
         catch (Exception exception) when (exception is GitException or IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
         {
-            this.ErrorText.Text = L10n.T(exception.Message);
+            this.SetStatus(L10n.T(exception.Message));
         }
         finally
         {
             this._updating = false;
             this._loading = false;
+            this.StashMenuItem.IsEnabled = this._selectedCopy is not null;
+            this.StatusChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private void SetStatus(string message)
+    {
+        this.StatusMessage = message;
+        this._statusVersion++;
+        this.StatusChanged?.Invoke(this, EventArgs.Empty);
     }
 }

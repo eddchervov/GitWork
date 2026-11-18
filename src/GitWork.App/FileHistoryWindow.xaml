@@ -99,7 +99,7 @@
               <RowDefinition />
             </Grid.RowDefinitions>
             <TextBlock x:Name="SnapshotNotice" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,8" />
-            <TextBox x:Name="SnapshotText" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True" AcceptsTab="True" FontFamily="Cascadia Mono, Consolas" FontSize="12" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" />
+            <RichTextBox x:Name="SnapshotText" Grid.Row="1" IsReadOnly="True" IsDocumentEnabled="True" FontFamily="Cascadia Mono, Consolas" FontSize="12" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" AutomationProperties.Name="{local:Loc 'Версия файла'}" />
           </Grid>
         </TabItem>
         <TabItem Header="{local:Loc 'Изменения коммита'}">

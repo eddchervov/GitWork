@@ -207,7 +207,9 @@ internal static class InlineWorktreeUiChecks
         repositoriesView.RemoveRepositoryRequested += path => removed = path;
         menu.PlacementTarget = row;
         menu.IsOpen = true;
-        ((MenuItem)menu.Items[0]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        var removeMenuItem = menu.Items.OfType<MenuItem>().SingleOrDefault(item => Equals(item.Tag, "remove-repository"))
+            ?? throw new InvalidOperationException("Контекстное меню должно содержать действие удаления репозитория из списка.");
+        removeMenuItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         await InlineWorktreeUiChecks.WaitUntilAsync(() => repositoriesView.CanLeave);
         menu.IsOpen = false;
         if (removed != linked || list.Items.Count != 1 || !File.Exists(Path.Combine(linked, ".git")))

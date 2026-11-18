@@ -60,6 +60,18 @@ internal static class RepositoryClientUiChecks
                     throw new InvalidOperationException("Список должен показывать ветку и счётчик незакоммиченных файлов, скрывая отметку чистого репозитория.");
                 }
 
+                var more = (Button)view.FindName("MoreActionsButton");
+                more.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                var menu = more.ContextMenu;
+                if (menu is not { IsOpen: true }
+                    || !menu.Items.OfType<MenuItem>().Any(item => item.Header is "Stash…" && item.IsEnabled)
+                    || !new[] { "ide", "terminal", "folder" }.All(action => menu.Items.OfType<MenuItem>()
+                        .Any(item => Equals(item.Tag, action))))
+                {
+                    throw new InvalidOperationException("Меню дополнительных действий должно открывать Stash, IDE, терминал и папку.");
+                }
+
+                menu.IsOpen = false;
                 var trigger = (Button)view.FindName("BranchSelectorButton");
                 var host = (FrameworkElement)view.FindName("BranchPickerHost");
                 var picker = (BranchPickerView)view.FindName("BranchPicker");
@@ -73,7 +85,7 @@ internal static class RepositoryClientUiChecks
                     || content.ActualWidth != width
                     || ((TextBlock)picker.FindName("CurrentBranchLabel")).Text != "main"
                     || ((FrameworkElement)picker.FindName("DirtyWarning")).Visibility != Visibility.Visible
-                    || branches.IsEnabled
+                    || !branches.IsEnabled
                     || branches.Items.Cast<BranchPickerChoice>().Any(choice => !choice.Branch.IsRemote && choice.Branch.Name == "main"))
                 {
                     throw new InvalidOperationException("Панель должна занимать высоту окна поверх diff, закреплять реальную ветку и запрещать переключение при изменениях.");

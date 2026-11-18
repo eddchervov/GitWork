@@ -95,14 +95,19 @@
           <TextBlock Grid.Column="4" Text="{local:Loc 'Хеш'}" Margin="7,0" VerticalAlignment="Center" Style="{StaticResource Caption}" />
         </Grid>
         <Grid Grid.Row="2">
-          <ListBox x:Name="CommitsList" SelectionChanged="Commit_Changed" PreviewMouseRightButtonDown="Commit_RightClick" PreviewGotKeyboardFocus="Commit_GotFocus" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{local:Loc 'Граф коммитов'}">
+          <ListBox x:Name="CommitsList" SelectionChanged="Commit_Changed" PreviewMouseRightButtonDown="Commit_RightClick" ContextMenuOpening="Commit_ContextMenuOpening" PreviewGotKeyboardFocus="Commit_GotFocus" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{local:Loc 'Граф коммитов'}">
             <ListBox.ContextMenu>
               <ContextMenu DataContext="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource Self}}">
+                <MenuItem IsEnabled="False"><MenuItem.Header><StackPanel MaxWidth="340"><TextBlock Text="{Binding Row.Commit.ShortHash}" Foreground="{DynamicResource MutedBrush}" /><TextBlock Text="{Binding Row.Commit.Subject}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" /></StackPanel></MenuItem.Header></MenuItem>
+                <MenuItem Header="{local:Loc 'Сведения о коммите…'}" Tag="commit-info" Click="CommitInformation_Click" />
+                <Separator />
                 <MenuItem Header="{local:Loc 'Создать ветку от коммита…'}" Click="BranchFromCommit_Click" />
                 <MenuItem Header="{local:Loc 'Создать worktree от коммита…'}" Click="WorktreeFromCommit_Click" />
                 <Separator />
                 <MenuItem Header="{local:Loc 'Cherry-pick в ветку…'}" Click="CherryPick_Click" />
                 <MenuItem Header="{local:Loc 'Копировать хеш коммита'}" Click="CopyCommit_Click" />
+                <MenuItem Header="{local:Loc 'Копировать короткий хеш'}" Tag="short" Click="CopyCommit_Click" />
+                <MenuItem Header="{local:Loc 'Копировать сообщение коммита'}" Tag="commit-message" Click="CopyCommitMessage_Click" />
               </ContextMenu>
             </ListBox.ContextMenu>
             <ListBox.ItemContainerStyle>

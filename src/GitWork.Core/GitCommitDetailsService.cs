@@ -4,6 +4,26 @@ public sealed class GitCommitDetailsService(GitService git)
 {
     private readonly GitService _git = git;
 
+    public async Task<GitCommitInformation> GetInformationAsync(string worktree, string hash)
+    {
+        var revision = await this.ResolveAsync(worktree, hash);
+        var output = await this._git.RunLimitedAsync(worktree, 200_001, "log", "--no-walk", "-1",
+            "--format=%H%x00%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI%x00%P%x00%B", revision, "--");
+        if (output.Length > 200_000)
+        {
+            throw new GitException("Сведения о коммите слишком велики для просмотра.");
+        }
+
+        var fields = output.Split('\0', 9);
+        if (fields.Length != 9 || fields[0] != revision)
+        {
+            throw new GitException("Git вернул неверные сведения о коммите.");
+        }
+
+        return new GitCommitInformation(fields[0], fields[1], fields[2], fields[3], fields[4], fields[5],
+            fields[6], fields[7], fields[8].TrimEnd('\r', '\n'));
+    }
+
     public async Task<IReadOnlyList<ChangedFile>> GetFilesAsync(string worktree, string hash)
     {
         var revision = await this.ResolveAsync(worktree, hash);

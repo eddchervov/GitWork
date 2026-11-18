@@ -33,7 +33,7 @@ public sealed class GitChangeService
                 return GitChangeService.EmptyDiff("Файл ещё не добавлен в индекс.");
             }
 
-            return await this.ReadUntrackedAsync(worktree, file.Path);
+            return await this.ReadUntrackedAsync(worktree, file.Path, file.IsGitLink);
         }
 
         var arguments = new List<string> { "diff", "--no-ext-diff", "--no-textconv", "--find-renames", "--unified=3" };
@@ -83,7 +83,7 @@ public sealed class GitChangeService
 
         if (current.Status == "??" || await this.HasNoHeadAsync(worktree))
         {
-            return await this.ReadUntrackedAsync(worktree, file.Path);
+            return await this.ReadUntrackedAsync(worktree, file.Path, file.IsGitLink);
         }
 
         var paths = GitChangeService.GetPathspecs(file);
@@ -228,7 +228,7 @@ public sealed class GitChangeService
         }
     }
 
-    private async Task<FileDiff> ReadUntrackedAsync(string worktree, string relativePath)
+    private async Task<FileDiff> ReadUntrackedAsync(string worktree, string relativePath, bool isGitLink)
     {
         var root = Path.GetFullPath(worktree);
         var path = Path.GetFullPath(Path.Combine(root, relativePath));
@@ -241,9 +241,40 @@ public sealed class GitChangeService
         {
             var hasRepository = File.Exists(Path.Combine(path, ".git")) || Directory.Exists(Path.Combine(path, ".git"));
 
-            return GitChangeService.EmptyDiff(hasRepository
-                ? "Это вложенный Git-репозиторий или worktree. Откройте его отдельно для просмотра изменений. В коммит родительского репозитория эта папка не включается."
-                : "Это папка. Выберите отдельный файл внутри неё для просмотра и коммита.");
+            if (isGitLink || hasRepository)
+            {
+                var nestedRepositoryRoot = await this._git.GetRepositoryRootAsync(path);
+                if (!GitService.PathsEqual(nestedRepositoryRoot, path))
+                {
+                    return GitChangeService.EmptyDiff("Каталог не является корнем вложенного Git-репозитория.");
+                }
+
+                string hash;
+                try
+                {
+                    hash = (await this._git.RunAsync(path, "rev-parse", "--verify", "--end-of-options", "HEAD^{commit}"))
+                        .TrimEnd('\r', '\n');
+                }
+                catch (GitException)
+                {
+                    return GitChangeService.EmptyDiff("Во вложенном репозитории пока нет коммита. Создайте в нём коммит, чтобы добавить ссылку на его версию.");
+                }
+
+                if (hash.Length is not (40 or 64) || hash.Any(character => !Uri.IsHexDigit(character)))
+                {
+                    return GitChangeService.EmptyDiff("Не удалось прочитать текущий коммит вложенного репозитория.");
+                }
+
+                var patch = $"diff --git a/{relativePath} b/{relativePath}\nnew file mode 160000\nindex 0000000..{hash[..7]}\n--- /dev/null\n+++ b/{relativePath}\n@@ -0,0 +1 @@\n+Subproject commit {hash}";
+                var diff = GitChangeService.ParsePatch(patch, false);
+
+                return diff with
+                {
+                    Message = "В родительский коммит попадёт ссылка на коммит вложенного репозитория. Незакоммиченные файлы внутри него не попадут в этот коммит."
+                };
+            }
+
+            return GitChangeService.EmptyDiff("Это папка. Выберите отдельный файл внутри неё для просмотра и коммита.");
         }
 
         if (!File.Exists(path))

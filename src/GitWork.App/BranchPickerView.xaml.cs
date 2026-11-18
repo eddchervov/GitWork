@@ -10,10 +10,13 @@ public partial class BranchPickerView : UserControl
 {
     private IReadOnlyList<BranchPickerChoice> _choices = [];
     private IReadOnlyList<BranchPickerChoice> _visibleChoices = [];
+    private string _currentBranchName = "";
     private bool _hasChanges;
     private bool _updating;
 
     public event Action<BranchInfo>? BranchSelected;
+
+    public event Action<BranchInfo>? BranchDeleteRequested;
 
     public event EventHandler? CreateBranchRequested;
 
@@ -28,9 +31,10 @@ public partial class BranchPickerView : UserControl
     {
         this._updating = true;
         this._hasChanges = hasChanges;
+        this._currentBranchName = string.IsNullOrWhiteSpace(tree.Branch) ? tree.BranchLabel : tree.Branch;
         this.CurrentBranchLabel.Text = tree.BranchLabel;
         this.DirtyWarning.Visibility = hasChanges ? Visibility.Visible : Visibility.Collapsed;
-        this.BranchesList.IsEnabled = !hasChanges;
+        this.BranchesList.IsEnabled = true;
         this.NewBranchButton.IsEnabled = !hasChanges;
 
         var choices = branches
@@ -87,6 +91,52 @@ public partial class BranchPickerView : UserControl
 
         this.ActivateChoice(choice);
         e.Handled = true;
+    }
+
+    private void BranchesList_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource is not DependencyObject source
+            || ItemsControl.ContainerFromElement(this.BranchesList, source) is not ListBoxItem item
+            || item.DataContext is not BranchPickerChoice choice)
+        {
+            return;
+        }
+
+        this.BranchesList.SelectedItem = choice;
+        item.Focus();
+        var canDelete = !choice.Branch.IsRemote && choice.Branch.OccupiedPath is null;
+        item.ContextMenu = this.CreateBranchContextMenu(choice.Branch.Name, choice.Branch, canDelete);
+        item.ContextMenu.PlacementTarget = item;
+        item.ContextMenu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private void CurrentBranchCard_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var contextMenu = this.CreateBranchContextMenu(this._currentBranchName, null, canDelete: false);
+        this.CurrentBranchCard.ContextMenu = contextMenu;
+        contextMenu.PlacementTarget = this.CurrentBranchCard;
+        contextMenu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private ContextMenu CreateBranchContextMenu(string branchName, BranchInfo? branch, bool canDelete)
+    {
+        var menu = new ContextMenu();
+        var copyItem = new MenuItem { Header = L10n.T("Скопировать имя") };
+        copyItem.Click += (_, _) => Clipboard.SetText(branchName);
+        var deleteItem = new MenuItem { Header = L10n.T("Удалить ветку…"), IsEnabled = canDelete };
+        deleteItem.Click += (_, _) =>
+        {
+            if (branch is not null && canDelete)
+            {
+                this.BranchDeleteRequested?.Invoke(branch);
+            }
+        };
+        menu.Items.Add(copyItem);
+        menu.Items.Add(deleteItem);
+
+        return menu;
     }
 
     private void Picker_Loaded(object sender, RoutedEventArgs e)

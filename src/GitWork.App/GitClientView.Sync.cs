@@ -83,7 +83,16 @@ public partial class GitClientView
 
     private async void SyncPull_Click(object sender, RoutedEventArgs e) => await this.SynchronizeAsync(SyncOperation.Pull);
 
-    private async void SyncPush_Click(object sender, RoutedEventArgs e) => await this.SynchronizeAsync(SyncOperation.Push);
+    private async void SyncPush_Click(object sender, RoutedEventArgs e)
+    {
+        if (this._syncState?.CanPublish == true)
+        {
+            await this.PublishCurrentBranchAsync();
+            return;
+        }
+
+        await this.SynchronizeAsync(SyncOperation.Push);
+    }
 
     private async Task SynchronizeAsync(SyncOperation operation)
     {
@@ -137,7 +146,7 @@ public partial class GitClientView
 
             if (operationMessage is not null)
             {
-                this.ErrorText.Text = L10n.T(operationMessage);
+                this.SetStatus(L10n.T(operationMessage));
             }
         }
         finally
@@ -152,13 +161,16 @@ public partial class GitClientView
         var state = this._syncState;
         var remote = this.SyncRemotePicker.SelectedItem as GitRemoteInfo;
         var pushRemote = state?.Remotes.FirstOrDefault(item => item.Name == state.UpstreamRemote);
+        var needsPublication = state is { IsDetached: false, Branch: not null, UpstreamRemote: null };
+        this.SyncPullButton.Visibility = needsPublication ? Visibility.Collapsed : Visibility.Visible;
         this.SyncFetchButton.Content = L10n.T("Fetch");
         this.SyncPullButton.Content = state is { Behind: > 0 } ? L10n.T("Pull ↓{0}", state.Behind) : L10n.T("Pull");
-        this.SyncPushButton.Content = state is { Ahead: > 0 } ? L10n.T("Push ↑{0}", state.Ahead) : L10n.T("Push");
+        this.SyncPushButton.Content = needsPublication ? L10n.T("Опубликовать ветку…")
+            : state is { Ahead: > 0 } ? L10n.T("Push ↑{0}", state.Ahead) : L10n.T("Push");
         this.SyncRemotePicker.IsEnabled = !this._syncBusy && state is not null && state.Remotes.Count > 1;
         this.SyncFetchButton.IsEnabled = !this._syncBusy && state is not null && remote is not null;
         this.SyncPullButton.IsEnabled = !this._syncBusy && state?.CanPull == true;
-        this.SyncPushButton.IsEnabled = !this._syncBusy && state?.CanPush == true;
+        this.SyncPushButton.IsEnabled = !this._syncBusy && (state?.CanPush == true || state?.CanPublish == true);
         this.SyncRemotePicker.ToolTip = remote?.Url;
         this.SyncFetchButton.ToolTip = remote is null
             ? L10n.T("В репозитории не настроен сервер для Fetch.")
@@ -166,6 +178,14 @@ public partial class GitClientView
         this.SyncPullButton.ToolTip = state?.CanPull == true
             ? L10n.T("Загрузить изменения upstream и обновить текущую ветку только fast-forward.")
             : L10n.T(state?.PullUnavailableReason ?? "Выберите репозиторий");
+        if (needsPublication)
+        {
+            this.SyncPushButton.ToolTip = state!.CanPublish
+                ? L10n.T("Создать ветку на выбранном сервере и настроить upstream.")
+                : L10n.T(state.PublicationUnavailableReason ?? "Публикация ветки недоступна.");
+            return;
+        }
+
         this.SyncPushButton.ToolTip = state?.CanPush == true
             ? L10n.T("Отправить только коммиты текущей ветки в её upstream. Принудительная отправка не используется.\nАдрес: {0}", pushRemote?.DisplayPushUrl ?? "")
             : L10n.T(state?.PushUnavailableReason ?? "Выберите репозиторий");

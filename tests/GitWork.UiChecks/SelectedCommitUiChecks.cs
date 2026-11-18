@@ -79,13 +79,43 @@ internal static class SelectedCommitUiChecks
         }
         finally
         {
-            window?.Close();
-            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            if (window?.Content is ChangesView view)
             {
-                File.SetAttributes(file, FileAttributes.Normal);
+                view.Detach();
             }
 
-            Directory.Delete(root, true);
+            window?.Close();
+            var temporaryPath = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!Path.GetFullPath(root).StartsWith(temporaryPath, StringComparison.OrdinalIgnoreCase)
+                || !Path.GetFileName(root).StartsWith("git-work-selected-ui-", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Небезопасный путь временной проверки.");
+            }
+
+            SelectedCommitUiChecks.RunAsync(async () =>
+            {
+                for (var attempt = 0; attempt < 40; attempt++)
+                {
+                    try
+                    {
+                        if (Directory.Exists(root))
+                        {
+                            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                            {
+                                File.SetAttributes(file, FileAttributes.Normal);
+                            }
+
+                            Directory.Delete(root, true);
+                        }
+
+                        return;
+                    }
+                    catch (IOException) when (attempt < 39)
+                    {
+                        await Task.Delay(50);
+                    }
+                }
+            });
         }
     }
 

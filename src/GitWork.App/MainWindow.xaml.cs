@@ -58,15 +58,8 @@ public partial class MainWindow : Window
             this.NavigationModePicker.SelectedValue = this._settings.NavigationMode;
             this._isUpdating = false;
             this.SidebarColumn.Width = new GridLength(Math.Clamp(double.IsFinite(this._settings.SidebarWidth) ? this._settings.SidebarWidth : 310, 210, 640));
-            if (this._settings.MainSection == "Worktrees")
-            {
-                await this.ScanAsync();
-            }
-            else
-            {
-                await this.UpdateGitClientAsync();
-            }
-        }, L10n.T("Поиск рабочих копий…"));
+            await this.LoadMainSectionAsync("Repositories");
+        }, L10n.T("Обновление списка…"));
         this.ConfigureRefresh();
         this.InitializeUpdateChecks(this, e);
     }
@@ -78,28 +71,37 @@ public partial class MainWindow : Window
             return;
         }
 
+        var previousClient = this.ActiveGitClient;
+        var previousClientStatus = previousClient?.StatusMessage;
+        var completed = false;
         this._isBusy = true;
         this._stateVersion++;
         this.Workspace.IsEnabled = false;
         this.BusyProgress.Visibility = Visibility.Visible;
         this.StatusText.Text = L10n.T(message);
-        this.OperationMessage.Text = L10n.T(message);
-        this.OperationOverlay.Visibility = Visibility.Visible;
+        this.StatusText.ToolTip = L10n.T(message);
         this.GitClientHost.IsEnabled = false;
         this.InlineGitHost.IsEnabled = false;
 
         try
         {
             await operation();
+            completed = true;
             if (this.StatusText.Text == L10n.T(message))
             {
                 this.StatusText.Text = L10n.T("Готово");
+            }
+
+            if (this.StatusText.ToolTip as string == L10n.T(message))
+            {
+                this.StatusText.ToolTip = null;
             }
         }
         catch (Exception exception) when (exception is GitException or IOException or UnauthorizedAccessException
             or System.ComponentModel.Win32Exception or ArgumentException or InvalidOperationException)
         {
             this.StatusText.Text = L10n.T("Операция не завершена.");
+            this.StatusText.ToolTip = L10n.T(exception.Message);
             MessageBox.Show(this, L10n.T(exception.Message), "Git Work", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
@@ -108,8 +110,13 @@ public partial class MainWindow : Window
             this.Workspace.IsEnabled = true;
             this.GitClientHost.IsEnabled = true;
             this.InlineGitHost.IsEnabled = true;
-            this.OperationOverlay.Visibility = Visibility.Collapsed;
             this.BusyProgress.Visibility = Visibility.Collapsed;
+            if (completed && this.ActiveGitClient is { } client
+                && (client.IsLoading || client.StatusMessage.Length > 0
+                    && (client != previousClient || client.StatusMessage != previousClientStatus)))
+            {
+                this.UpdateGitClientStatus();
+            }
         }
     }
 
@@ -521,8 +528,8 @@ public partial class MainWindow : Window
 
             var progress = new Progress<string>(text =>
             {
-                this.OperationMessage.Text = text;
                 this.StatusText.Text = text;
+                this.StatusText.ToolTip = text;
             });
             var result = await new ProjectWorktreeService(this._git).CreateAsync(dialog.Plans, progress);
 

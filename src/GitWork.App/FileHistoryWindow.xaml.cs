@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
 using GitWork.Core;
 
 namespace GitWork.App;
@@ -100,7 +103,7 @@ public partial class FileHistoryWindow : Window
         this.RevisionPathText.ToolTip = L10n.T("Путь в этой версии: {0}", entry.RevisionPath);
         this.LoadingText.Text = L10n.T("Чтение версии и сравнений…");
         this.LoadingText.Visibility = Visibility.Visible;
-        this.SnapshotText.Clear();
+        this.SnapshotText.Document.Blocks.Clear();
         this.SnapshotNotice.Text = "";
         this.CommitDiffViewer.ShowDiff(new FileDiff("", "", "", [], false, L10n.T("Чтение изменений коммита…")));
         this.WorkingDiffViewer.ShowDiff(new FileDiff("", "", "", [], false, L10n.T("Сравнение с текущим файлом…")));
@@ -117,7 +120,7 @@ public partial class FileHistoryWindow : Window
             }
 
             var snapshot = await snapshotTask;
-            this.SnapshotText.Text = snapshot.Text;
+            this.ShowSnapshot(snapshot.Text, entry.RevisionPath);
             this.SnapshotNotice.Text = snapshot.Message ?? "";
             this.CommitDiffViewer.FilePath = entry.RevisionPath;
             this.WorkingDiffViewer.FilePath = this._currentPath;
@@ -136,6 +139,63 @@ public partial class FileHistoryWindow : Window
                 this.LoadingText.Visibility = Visibility.Collapsed;
             }
         }
+    }
+
+    private void ShowSnapshot(string text, string path)
+    {
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+        var syntax = DiffSyntaxHighlighter.Highlight(path, lines);
+        var paragraph = new Paragraph { Margin = new Thickness(0) };
+        var longestLine = "";
+        for (var index = 0; index < lines.Length; index++)
+        {
+            if (index > 0)
+            {
+                paragraph.Inlines.Add(new LineBreak());
+            }
+
+            var line = lines[index];
+            var expanded = line.Replace("\t", "        ");
+            if (expanded.Length > longestLine.Length)
+            {
+                longestLine = expanded;
+            }
+
+            var position = 0;
+            foreach (var span in syntax[index])
+            {
+                if (span.Start > position)
+                {
+                    paragraph.Inlines.Add(new Run(line[position..span.Start]));
+                }
+
+                var run = new Run(line.Substring(span.Start, span.Length));
+                run.SetResourceReference(TextElement.ForegroundProperty, span.ResourceKey);
+                paragraph.Inlines.Add(run);
+                position = span.Start + span.Length;
+            }
+
+            if (position < line.Length)
+            {
+                paragraph.Inlines.Add(new Run(line[position..]));
+            }
+        }
+
+        var width = new FormattedText(longestLine, CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight, new Typeface(this.SnapshotText.FontFamily, FontStyles.Normal, FontWeights.Normal,
+                FontStretches.Normal), this.SnapshotText.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(this).PixelsPerDip)
+            .WidthIncludingTrailingWhitespace;
+
+        this.SnapshotText.Document = new FlowDocument(paragraph)
+        {
+            FontFamily = this.SnapshotText.FontFamily,
+            FontSize = this.SnapshotText.FontSize,
+            PagePadding = new Thickness(8),
+            PageWidth = Math.Max(200, width + 32),
+            ColumnWidth = double.PositiveInfinity
+        };
+        this.SnapshotText.Document.SetResourceReference(TextElement.ForegroundProperty, "TextBrush");
+        this.SnapshotText.ScrollToHome();
     }
 
     private static string ShortError(Exception exception) => exception.Message.Length <= 180

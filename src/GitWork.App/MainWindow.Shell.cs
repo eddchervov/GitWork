@@ -10,6 +10,9 @@ public partial class MainWindow
     private GitClientView? _gitClient;
     private GitClientView? _inlineGitClient;
     private bool _changingSection;
+    private bool _switchingMainSection;
+    private string _requestedMainSection = "Repositories";
+    private int _mainSectionRequestVersion;
 
     private GitClientView? ActiveGitClient => this.GitClientHost.Visibility == Visibility.Visible
         ? this._gitClient
@@ -44,6 +47,7 @@ public partial class MainWindow
             {
                 EmbeddedInWorkspace = true
             };
+            this._inlineGitClient.StatusChanged += this.GitClient_StatusChanged;
             this._inlineGitClient.ContextChanged += async (selectedRepository, selectedTree) =>
             {
                 if (this.InlineGitHost.Visibility != Visibility.Visible)
@@ -93,6 +97,7 @@ public partial class MainWindow
         if (this._gitClient is null)
         {
             this._gitClient = new GitClientView(this._git, this._settings);
+            this._gitClient.StatusChanged += this.GitClient_StatusChanged;
             this._gitClient.AddRepositoryRequested += (_, _) => this.AddRepository_Click(this, new RoutedEventArgs());
             this._gitClient.BackToWorkspaceRequested += async (_, _) =>
             {
@@ -139,6 +144,11 @@ public partial class MainWindow
 
     private void ApplyMainSection(string section, bool preserveContent = false)
     {
+        if (this._switchingMainSection)
+        {
+            section = this._requestedMainSection;
+        }
+
         this._changingSection = true;
         var repositories = section != "Worktrees";
         this.RepositoriesSection.IsChecked = repositories;
@@ -155,6 +165,28 @@ public partial class MainWindow
             this.InlineGitHost.Visibility = Visibility.Collapsed;
             this.WorktreeActionsColumn.Width = new GridLength(0);
         }
+
+        this.UpdateGitClientStatus();
+    }
+
+    private void GitClient_StatusChanged(object? sender, EventArgs e)
+    {
+        if (ReferenceEquals(sender, this.ActiveGitClient))
+        {
+            this.UpdateGitClientStatus();
+        }
+    }
+
+    private void UpdateGitClientStatus()
+    {
+        if (this._isBusy || this.ActiveGitClient is not { } client)
+        {
+            return;
+        }
+
+        this.StatusText.Text = client.StatusMessage.Length == 0 ? L10n.T("Готово") : client.StatusMessage;
+        this.StatusText.ToolTip = client.StatusMessage.Length == 0 ? null : client.StatusMessage;
+        this.BusyProgress.Visibility = client.IsLoading ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void MainSection_Changed(object sender, RoutedEventArgs e)
@@ -164,15 +196,52 @@ public partial class MainWindow
             return;
         }
 
-        if (this._isBusy || !this.CanLeaveGitClients)
+        if (this._switchingMainSection)
         {
-            this.ApplyMainSection(this._settings.MainSection, preserveContent: true);
+            this._requestedMainSection = section;
+            this._mainSectionRequestVersion++;
+            this.ApplyMainSection(section);
+            this.SaveSettings();
             return;
         }
 
-        this.ApplyMainSection(section);
-        this.SaveSettings();
-        await this.ExecuteAsync(() => section == "Worktrees" ? this.ScanAsync() : this.UpdateGitClientAsync(resetView: true), "Обновление списка…");
+        if (this._isBusy || !this.CanLeaveGitClients)
+        {
+            await this.Dispatcher.InvokeAsync(() => this.ApplyMainSection(this._settings.MainSection, preserveContent: true));
+            return;
+        }
+
+        await this.ExecuteAsync(() => this.LoadMainSectionAsync(section), "Обновление списка…");
+    }
+
+    private async Task LoadMainSectionAsync(string section)
+    {
+        this._requestedMainSection = section;
+        this._switchingMainSection = true;
+        try
+        {
+            int version;
+            do
+            {
+                version = this._mainSectionRequestVersion;
+                section = this._requestedMainSection;
+                this.ApplyMainSection(section);
+                this.SaveSettings();
+                if (section == "Worktrees")
+                {
+                    await this.ScanAsync();
+                }
+                else
+                {
+                    await this.UpdateGitClientAsync(resetView: true);
+                }
+            }
+            while (version != this._mainSectionRequestVersion);
+        }
+        finally
+        {
+            this._switchingMainSection = false;
+        }
     }
 
     private async Task OpenCopyInClientAsync(RepositoryInfo repository, string path, string mode = "History")

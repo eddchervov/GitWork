@@ -25,12 +25,12 @@ public sealed class GitIndexService
         var indexSignature = await this.GetIndexSignatureAsync(worktree);
         var headHash = await this.GetHeadHashAsync(worktree);
         var workingFileFingerprint = scope == ChangeScope.WorkingTree
-            ? await GitIndexService.GetWorkingFileFingerprintAsync(worktree, file)
+            ? await this.GetWorkingFileFingerprintAsync(worktree, file)
             : null;
         var diff = await this._changes.GetRevisionAsync(worktree, file, scope);
         if (workingFileFingerprint is not null
             && !string.Equals(workingFileFingerprint,
-                await GitIndexService.GetWorkingFileFingerprintAsync(worktree, file), StringComparison.Ordinal))
+                await this.GetWorkingFileFingerprintAsync(worktree, file), StringComparison.Ordinal))
         {
             throw new GitException("Файл изменился во время чтения предпросмотра. Обновите изменения.");
         }
@@ -123,8 +123,14 @@ public sealed class GitIndexService
         var headHash = await this.GetHeadHashAsync(root);
         var files = new List<SelectedCommitFile>(selected.Count);
         var seenPaths = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var file in selected)
+        foreach (var selectedFile in selected)
         {
+            var file = selectedFile with
+            {
+                Path = selectedFile.Path.TrimEnd('/'),
+                OriginalPath = selectedFile.OriginalPath?.TrimEnd('/')
+            };
+
             GitIndexService.ValidatePath(file.Path);
             if (file.OriginalPath is not null)
             {
@@ -136,24 +142,21 @@ public sealed class GitIndexService
                 throw new GitException("В выбранном списке есть повторяющиеся файлы.");
             }
 
-            GitIndexService.EnsureStageableFile(root, file.Path);
+            GitIndexService.EnsureStageableFile(root, file.Path, allowGitLink: true);
             if (file.OriginalPath is not null)
             {
-                GitIndexService.EnsureStageableFile(root, file.OriginalPath);
+                GitIndexService.EnsureStageableFile(root, file.OriginalPath, allowGitLink: true);
             }
 
-            var current = status.FirstOrDefault(item => item.Path == file.Path && item.OriginalPath == file.OriginalPath);
+            var current = status.FirstOrDefault(item => item.Path.TrimEnd('/') == file.Path
+                && item.OriginalPath?.TrimEnd('/') == file.OriginalPath);
             if (current is null)
             {
                 throw new GitException($"Файл «{file.DisplayPath}» больше не изменён. Обновите список.");
             }
 
-            if (await this.IsSubmoduleAsync(root, file))
-            {
-                throw new GitException("Коммит подмодулей пока не поддерживается. Выберите отдельные файлы.");
-            }
-
-            var fingerprint = await GitIndexService.GetWorkingFileFingerprintAsync(root, file);
+            file = file with { IsGitLink = current.IsGitLink };
+            var fingerprint = await this.GetWorkingFileFingerprintAsync(root, file);
             files.Add(new SelectedCommitFile(file, current.Status, fingerprint));
         }
 
@@ -193,9 +196,10 @@ public sealed class GitIndexService
             if (untracked.Length > 0)
             {
                 var indexEntries = await this.GetIndexEntriesAsync(preview.Repository);
-                var intentArguments = new List<string> { "add", "-N", "--" };
-                intentArguments.AddRange(untracked.Select(file => GitIndexService.LiteralPathspec(file.File.Path)));
-                await this._git.RunAsync(preview.Repository, [.. intentArguments]);
+                await this._git.RunWithPathspecsAsync(
+                    preview.Repository,
+                    ["add", "-N"],
+                    untracked.Select(file => GitIndexService.LiteralPathspec(file.File.Path)));
                 intentIndexSignature = await this.GetIndexSignatureAsync(preview.Repository);
                 await this.VerifyIntentIndexAsync(preview.Repository, indexEntries, untracked);
             }
@@ -204,20 +208,20 @@ public sealed class GitIndexService
             try
             {
                 await File.WriteAllTextAsync(messagePath, message, new UTF8Encoding(false));
-                var arguments = new List<string> { "commit", "--only", "-F", messagePath, "--" };
-                foreach (var file in preview.Files)
-                {
-                    if (file.File.OriginalPath is not null)
+                var pathspecs = preview.Files.SelectMany(file => file.File.OriginalPath is null
+                    ? new[] { GitIndexService.LiteralPathspec(file.File.Path) }
+                    : new[]
                     {
-                        arguments.Add(GitIndexService.LiteralPathspec(file.File.OriginalPath));
-                    }
-
-                    arguments.Add(GitIndexService.LiteralPathspec(file.File.Path));
-                }
+                        GitIndexService.LiteralPathspec(file.File.OriginalPath),
+                        GitIndexService.LiteralPathspec(file.File.Path)
+                    });
 
                 await this.VerifySelectedWorkingFilesAsync(preview, untracked.Length > 0,
                     intentIndexSignature ?? preview.IndexSignature);
-                await this._git.RunAsync(preview.Repository, [.. arguments]);
+                await this._git.RunWithPathspecsAsync(
+                    preview.Repository,
+                    ["commit", "--only", "-F", messagePath],
+                    pathspecs);
             }
             finally
             {
@@ -229,9 +233,10 @@ public sealed class GitIndexService
             if (intentIndexSignature is not null && untracked.Length > 0
                 && string.Equals(await this.GetIndexSignatureAsync(preview.Repository), intentIndexSignature, StringComparison.Ordinal))
             {
-                var arguments = new List<string> { "rm", "--cached", "--ignore-unmatch", "--" };
-                arguments.AddRange(untracked.Select(file => GitIndexService.LiteralPathspec(file.File.Path)));
-                await this._git.RunAsync(preview.Repository, [.. arguments]);
+                await this._git.RunWithPathspecsAsync(
+                    preview.Repository,
+                    ["rm", "--cached", "--ignore-unmatch"],
+                    untracked.Select(file => GitIndexService.LiteralPathspec(file.File.Path)));
             }
 
             throw;
@@ -253,11 +258,12 @@ public sealed class GitIndexService
 
         foreach (var selected in preview.Files)
         {
-            var current = status.FirstOrDefault(file => file.Path == selected.File.Path && file.OriginalPath == selected.File.OriginalPath);
+            var current = status.FirstOrDefault(file => file.Path.TrimEnd('/') == selected.File.Path
+                && file.OriginalPath?.TrimEnd('/') == selected.File.OriginalPath);
             var statusMatches = current is not null && (current.Status == selected.Status
                 || allowIntentToAdd && selected.Status == "??" && current.Status == " A");
             if (!statusMatches
-                || !string.Equals(await GitIndexService.GetWorkingFileFingerprintAsync(preview.Repository, selected.File),
+                || !string.Equals(await this.GetWorkingFileFingerprintAsync(preview.Repository, selected.File),
                     selected.WorkingFileFingerprint, StringComparison.Ordinal))
             {
                 throw new GitException($"Файл «{selected.File.DisplayPath}» изменился. Обновите список.");
@@ -285,12 +291,17 @@ public sealed class GitIndexService
         IReadOnlyList<SelectedCommitFile> untracked)
     {
         var intentPaths = untracked.Select(file => file.File.Path).ToHashSet(StringComparer.Ordinal);
+        var gitLinkPaths = untracked.Where(file => file.File.IsGitLink)
+            .Select(file => file.File.Path).ToHashSet(StringComparer.Ordinal);
+
         var currentEntries = await this.GetIndexEntriesAsync(repository);
         var originalEntries = indexEntries.Where(entry => !GitIndexService.IsPathInSet(entry, intentPaths));
         var addedEntries = currentEntries.Where(entry => GitIndexService.IsPathInSet(entry, intentPaths)).ToArray();
         if (!originalEntries.SequenceEqual(currentEntries.Except(addedEntries), StringComparer.Ordinal)
             || addedEntries.Length != untracked.Count
-            || addedEntries.Any(entry => !entry.StartsWith("100", StringComparison.Ordinal)))
+            || addedEntries.Any(entry => !entry.StartsWith("100", StringComparison.Ordinal)
+                && !(entry.StartsWith("160000 ", StringComparison.Ordinal)
+                    && GitIndexService.IsPathInSet(entry, gitLinkPaths))))
         {
             throw new GitException("Индекс изменился во время подготовки выбранных файлов. Обновите список.");
         }
@@ -304,26 +315,6 @@ public sealed class GitIndexService
     {
         var separator = indexEntry.IndexOf('\t');
         return separator >= 0 && paths.Contains(indexEntry[(separator + 1)..]);
-    }
-
-    private async Task<bool> IsSubmoduleAsync(string repository, ChangedFile file)
-    {
-        var output = await this._git.RunAsync(repository, "ls-files", "--stage", "-z", "--",
-            GitIndexService.LiteralPathspec(file.Path));
-        if (output.Split('\0', StringSplitOptions.RemoveEmptyEntries).Any(entry => entry.StartsWith("160000 ", StringComparison.Ordinal)))
-        {
-            return true;
-        }
-
-        if (file.OriginalPath is null)
-        {
-            return false;
-        }
-
-        output = await this._git.RunAsync(repository, "ls-files", "--stage", "-z", "--",
-            GitIndexService.LiteralPathspec(file.OriginalPath));
-        return output.Split('\0', StringSplitOptions.RemoveEmptyEntries)
-            .Any(entry => entry.StartsWith("160000 ", StringComparison.Ordinal));
     }
 
     private async Task MutateFileAsync(IndexPreview preview, bool stage)
@@ -350,7 +341,7 @@ public sealed class GitIndexService
                 throw new GitException("Изменения файла обновились. Обновите предпросмотр перед подготовкой файла.");
             }
 
-            var currentFingerprint = await GitIndexService.GetWorkingFileFingerprintAsync(preview.Worktree, preview.File);
+            var currentFingerprint = await this.GetWorkingFileFingerprintAsync(preview.Worktree, preview.File);
             if (!string.Equals(currentFingerprint, preview.WorkingFileFingerprint, StringComparison.Ordinal))
             {
                 throw new GitException("Содержимое файла обновилось. Обновите предпросмотр перед подготовкой файла.");
@@ -438,7 +429,7 @@ public sealed class GitIndexService
     private async Task<string> GetIndexSignatureAsync(string worktree) =>
         await this._git.RunAsync(worktree, "ls-files", "--stage", "-z");
 
-    private static async Task<string> GetWorkingFileFingerprintAsync(string worktree, ChangedFile file)
+    private async Task<string> GetWorkingFileFingerprintAsync(string worktree, ChangedFile file)
     {
         var root = Path.GetFullPath(worktree);
         var paths = file.OriginalPath is null ? new[] { file.Path } : new[] { file.OriginalPath, file.Path };
@@ -451,7 +442,7 @@ public sealed class GitIndexService
                 throw new GitException("Путь к файлу выходит за пределы рабочей копии.");
             }
 
-            var pathFingerprint = await GitIndexService.GetPathFingerprintAsync(root, path);
+            var pathFingerprint = await this.GetPathFingerprintAsync(root, path);
             fingerprint.Append(relativePath.Length).Append(':').Append(relativePath).Append(':')
                 .Append(pathFingerprint.Length).Append(':').Append(pathFingerprint).Append('\0');
         }
@@ -459,7 +450,7 @@ public sealed class GitIndexService
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(fingerprint.ToString())));
     }
 
-    private static async Task<string> GetPathFingerprintAsync(string root, string path)
+    private async Task<string> GetPathFingerprintAsync(string root, string path)
     {
         var relativePath = Path.GetRelativePath(root, path);
         var currentPath = root;
@@ -501,6 +492,20 @@ public sealed class GitIndexService
 
         if ((File.GetAttributes(path) & FileAttributes.Directory) != 0)
         {
+            if (File.Exists(Path.Combine(path, ".git")) || Directory.Exists(Path.Combine(path, ".git")))
+            {
+                var nestedRoot = await this._git.GetRepositoryRootAsync(path);
+                if (!GitService.PathsEqual(nestedRoot, path))
+                {
+                    throw new GitException("Папка не является корнем вложенного Git-репозитория.");
+                }
+
+                var head = (await this._git.RunAsync(path, "rev-parse", "--verify", "--end-of-options", "HEAD^{commit}"))
+                    .TrimEnd('\r', '\n');
+
+                return "gitlink:" + head;
+            }
+
             return "directory";
         }
 
@@ -511,7 +516,7 @@ public sealed class GitIndexService
 
     private static string? GetLinkTarget(string path) => new FileInfo(path).LinkTarget ?? new DirectoryInfo(path).LinkTarget;
 
-    private static void EnsureStageableFile(string worktree, string relativePath)
+    private static void EnsureStageableFile(string worktree, string relativePath, bool allowGitLink = false)
     {
         var root = Path.GetFullPath(worktree);
         var fullPath = Path.GetFullPath(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)));
@@ -530,10 +535,13 @@ public sealed class GitIndexService
             {
                 var attributes = File.GetAttributes(currentPath);
                 var isLastSegment = index == segments.Length - 1;
-                if ((attributes & FileAttributes.Directory) != 0 && isLastSegment
+                var isGitLink = allowGitLink && (attributes & FileAttributes.ReparsePoint) == 0
+                    && (File.Exists(Path.Combine(currentPath, ".git")) || Directory.Exists(Path.Combine(currentPath, ".git")));
+
+                if ((attributes & FileAttributes.Directory) != 0 && isLastSegment && !isGitLink
                     || (attributes & FileAttributes.ReparsePoint) != 0 && !isLastSegment)
                 {
-                    throw new GitException("Папки и подмодули целиком пока не поддерживаются. Выберите отдельный файл внутри папки.");
+                    throw new GitException("Выберите отдельные файлы или корень вложенного Git-репозитория. Обычную папку целиком добавить нельзя.");
                 }
             }
             catch (FileNotFoundException)

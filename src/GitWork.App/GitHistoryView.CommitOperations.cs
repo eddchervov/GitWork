@@ -9,6 +9,8 @@ namespace GitWork.App;
 
 public partial class GitHistoryView
 {
+    private bool _commitRightClickHasTarget;
+
     private void Commit_RightClick(object sender, MouseButtonEventArgs e)
     {
         if (this._isBusy)
@@ -17,23 +19,33 @@ public partial class GitHistoryView
             return;
         }
 
-        GitHistoryView.SelectContainer(e.OriginalSource as DependencyObject);
+        this._commitRightClickHasTarget = GitHistoryView.SelectContainer(e.OriginalSource as DependencyObject);
+        e.Handled = !this._commitRightClickHasTarget;
+    }
+
+    private void Commit_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        e.Handled = this._isBusy || this.CommitsList.SelectedItem is not GraphCommitItem
+            || e.CursorLeft >= 0 && !this._commitRightClickHasTarget;
+        this._commitRightClickHasTarget = false;
     }
 
     private void Commit_GotFocus(object sender, KeyboardFocusChangedEventArgs e) => GitHistoryView.SelectContainer(e.NewFocus as DependencyObject);
 
-    private static void SelectContainer(DependencyObject? element)
+    private static bool SelectContainer(DependencyObject? element)
     {
         while (element is not null)
         {
             if (element is ListBoxItem item)
             {
                 item.IsSelected = true;
-                return;
+                return true;
             }
 
             element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element);
         }
+
+        return false;
     }
 
     private async void BranchFromCommit_Click(object sender, RoutedEventArgs e)
@@ -190,7 +202,7 @@ public partial class GitHistoryView
         this.CommitsList.SelectedItem = item;
         try
         {
-            Clipboard.SetText(item.Row.Commit.Hash);
+            Clipboard.SetText(sender is MenuItem { Tag: "short" } ? item.Row.Commit.ShortHash : item.Row.Commit.Hash);
         }
         catch (System.Runtime.InteropServices.ExternalException)
         {

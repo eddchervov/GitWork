@@ -9,6 +9,7 @@ public partial class GitClientView
     {
         if (sender is Button { ContextMenu: { } menu } button)
         {
+            this.StashMenuItem.IsEnabled = this.CanLeave && this._selectedCopy is { IsBare: false, IsPrunable: false };
             this.PrepareMenuItem.IsEnabled = this.CanLeave && this._selectedCopy is { IsMain: false, IsBare: false, IsPrunable: false };
             menu.PlacementTarget = button;
             menu.IsOpen = true;

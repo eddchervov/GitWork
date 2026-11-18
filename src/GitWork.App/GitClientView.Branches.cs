@@ -15,6 +15,7 @@ public partial class GitClientView
         this.BranchPicker.CloseRequested += (_, _) => this.CloseBranchPicker();
         this.BranchPicker.CreateBranchRequested += (_, _) => this.NewBranch_Click(this, new RoutedEventArgs());
         this.BranchPicker.BranchSelected += async branch => await this.SelectBranchAsync(branch);
+        this.BranchPicker.BranchDeleteRequested += async branch => await this.DeleteBranchAsync(branch);
         this.IsVisibleChanged += (_, _) =>
         {
             if (!this.IsVisible)

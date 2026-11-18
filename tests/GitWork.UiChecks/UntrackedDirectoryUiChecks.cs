@@ -34,17 +34,19 @@ internal static class UntrackedDirectoryUiChecks
 
             var files = git.GetStatusAsync(repository, true).GetAwaiter().GetResult();
             var directory = files.Single(file => file.Path == ".worktrees/task/");
-            if (!directory.IsDirectory || directory.FileName != "task" || directory.StatusCode.Length != 0
-                || directory.StatusDescription != "Папка" || !Directory.Exists(nestedWorktree))
+            if (!directory.IsDirectory || !directory.IsGitLink || directory.FileName != "task" || directory.StatusCode != "A"
+                || directory.StatusDescription != "Ссылка на коммит вложенного репозитория" || !Directory.Exists(nestedWorktree))
             {
-                throw new InvalidOperationException("Вложенный worktree должен оставаться в статусе Git как существующая папка.");
+                throw new InvalidOperationException("Вложенный worktree должен отображаться как ссылка на коммит.");
             }
 
             var directoryDiff = new GitChangeService(git).GetWorkingRevisionAsync(repository, directory).GetAwaiter().GetResult();
-            if (directoryDiff.Message is null || directoryDiff.UnifiedText.Length != 0 || directoryDiff.Lines.Count != 0
-                || !directoryDiff.Message.Contains("worktree", StringComparison.OrdinalIgnoreCase))
+            if (directoryDiff.Message is null || !directoryDiff.Message.Contains("ссылка на коммит", StringComparison.OrdinalIgnoreCase)
+                || !directoryDiff.Message.Contains("незакоммиченные файлы", StringComparison.OrdinalIgnoreCase)
+                || !directoryDiff.UnifiedText.Contains("new file mode 160000", StringComparison.Ordinal)
+                || !directoryDiff.UnifiedText.Contains("Subproject commit ", StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("Папка не должна отображаться как удалённый файл или как содержимое diff.");
+                throw new InvalidOperationException("Предпросмотр должен показывать ссылку 160000 и объяснять содержимое коммита.");
             }
 
             var view = new ChangesView("Online", [new ChangeSource("Online", repository, files)], git,
@@ -64,51 +66,51 @@ internal static class UntrackedDirectoryUiChecks
                     await Task.Delay(25);
                 }
 
-                if (directoryEntry.IsIncluded || directoryEntry.CanInclude
+                if (!directoryEntry.IsIncluded || !directoryEntry.CanInclude
                     || directoryEntry.File.FileName.Length == 0 || list.SelectedItem != directoryEntry
                     || view.FindName("HistoryButton") is not Button { IsEnabled: false }
-                    || diffViewer.FindName("CopyDiffButton") is not Button { IsEnabled: false }
-                    || ((TextBlock)view.FindName("FileContext")).Text != L10n.T("Папка")
+                    || diffViewer.FindName("CopyDiffButton") is not Button { IsEnabled: true }
+                    || ((TextBlock)view.FindName("FileContext")).Text != L10n.T(directory.StatusDescription)
                     || ((TextBox)diffViewer.FindName("MessageText")).Text != L10n.T(directoryDiff.Message)
-                    || ((RichTextBox)diffViewer.FindName("CodeViewer")).Document.Blocks.Count > 0)
+                    || ((RichTextBox)diffViewer.FindName("CodeViewer")).Document.Blocks.Count == 0)
                 {
-                    throw new InvalidOperationException("Папка worktree должна иметь имя, быть исключена из коммита и показывать только пояснение.");
+                    throw new InvalidOperationException("Worktree должен быть выбран и показывать предпросмотр ссылки на коммит.");
                 }
 
                 list.UpdateLayout();
                 var directoryRow = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(directoryEntry);
                 var directoryCheckbox = UntrackedDirectoryUiChecks.Descendants<CheckBox>(directoryRow).Single();
-                if (directoryCheckbox.IsEnabled || directoryCheckbox.IsChecked != false)
+                if (!directoryCheckbox.IsEnabled || directoryCheckbox.IsChecked != true)
                 {
-                    throw new InvalidOperationException("Галочку папки нельзя включить в коммит.");
+                    throw new InvalidOperationException("Галочку worktree можно включить в коммит как ссылку.");
                 }
 
-                directoryEntry.IsIncluded = true;
+                directoryEntry.IsIncluded = false;
                 if (directoryEntry.IsIncluded)
                 {
-                    throw new InvalidOperationException("Папка должна оставаться исключённой даже при попытке включить её вручную.");
+                    throw new InvalidOperationException("Ссылку на коммит worktree можно исключить вручную.");
                 }
 
                 await view.RefreshAsync();
                 directoryEntry = list.Items.Cast<ChangeFileEntry>().Single(entry => entry.File.IsDirectory);
                 if (directoryEntry.IsIncluded)
                 {
-                    throw new InvalidOperationException("Обновление статуса не должно включать папку в будущий коммит.");
+                    throw new InvalidOperationException("Обновление статуса должно сохранять выбор ссылки worktree.");
                 }
 
                 ordinaryEntry = list.Items.Cast<ChangeFileEntry>().Single(entry => entry.File.Path == "ordinary.txt");
                 ordinaryEntry.IsIncluded = false;
                 var selectAll = (CheckBox)view.FindName("SelectAllBox");
                 selectAll.RaiseEvent(new RoutedEventArgs(CheckBox.ClickEvent));
-                if (directoryEntry.IsIncluded || !ordinaryEntry.IsIncluded)
+                if (!directoryEntry.IsIncluded || !ordinaryEntry.IsIncluded)
                 {
-                    throw new InvalidOperationException("Выбор всех файлов должен исключать папку и включать обычный файл.");
+                    throw new InvalidOperationException("Выбор всех файлов должен включать ссылку worktree и обычный файл.");
                 }
 
                 selectAll.RaiseEvent(new RoutedEventArgs(CheckBox.ClickEvent));
                 if (directoryEntry.IsIncluded || ordinaryEntry.IsIncluded)
                 {
-                    throw new InvalidOperationException("Снятие выбора всех файлов не должно менять состояние папки.");
+                    throw new InvalidOperationException("Снятие выбора всех файлов должно исключать ссылку и обычный файл.");
                 }
             });
 
@@ -119,7 +121,7 @@ internal static class UntrackedDirectoryUiChecks
                 throw new InvalidOperationException("Просмотр папки не должен удалять файлы или менять регистрацию вложенного worktree.");
             }
 
-            Console.WriteLine("OK: вложенный worktree показан как папка и исключён из выбора файлов коммита.");
+            Console.WriteLine("OK: вложенный worktree показывается как ссылка на коммит и выбирается в коммит без своих незакоммиченных файлов.");
         }
         finally
         {

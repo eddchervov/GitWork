@@ -15,6 +15,7 @@ public partial class GitHistoryView : UserControl
     private readonly AppSettings _preparationSettings;
     private RemoteRepositoryState? _remoteState;
     private bool _isBusy;
+    private bool _isReloading;
     private bool _isInitializing = true;
     private bool _isClosed;
     private int _limit = 200;
@@ -35,6 +36,8 @@ public partial class GitHistoryView : UserControl
         this._remote = new GitRemoteService(git);
         this._details = new GitCommitDetailsService(git);
         this._git = git;
+        FileContextMenus.Attach(this.CommitFiles, git, item => item is GraphChangedFile row && this.SelectedRepository is { } repository
+            ? new FileMenuTarget(repository.Path, row.File, false) : null, () => this.IsBusy);
         this._operations = new GitCommitOperationService(git);
         this._preparationSettings = settings ?? AppSettings.Load();
         this.CommitDiff.IsUnified = true;
@@ -56,7 +59,7 @@ public partial class GitHistoryView : UserControl
 
     public bool IsBusy => this._isBusy;
 
-    public bool CanLeave => !this._isBusy;
+    public bool CanLeave => !this._isBusy || this._isReloading;
 
     public event EventHandler? RepositoryStateChanged;
 
@@ -199,6 +202,7 @@ public partial class GitHistoryView : UserControl
             return;
         }
 
+        this._isReloading = true;
         this.SetBusy(true);
         this.OperationStatus.Text = L10n.T("Чтение локальной истории…");
         try
@@ -216,6 +220,7 @@ public partial class GitHistoryView : UserControl
         }
         finally
         {
+            this._isReloading = false;
             this.SetBusy(false);
         }
     }
